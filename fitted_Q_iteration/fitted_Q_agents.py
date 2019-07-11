@@ -272,7 +272,10 @@ class FittedQAgent():
 
             # update Q function online
             if train:
-                #self.memory.append(transition)
+                print(len(self.memory))
+                if len(self.memory) > 60:
+                    self.memory = self.memory[1:]
+                self.memory.append(transition)
                 self.online_Q_learning_update(transition)
 
 
@@ -414,7 +417,7 @@ class KerasFittedQAgent(FittedQAgent):
         try:
             self.network = keras.models.load_model(load_path) # sometimes this crashes, apparently a bug in keras
         except:
-            self.network.load_weights(load_path) # this requires model to be initialised exactly the same 
+            self.network.load_weights(load_path) # this requires model to be initialised exactly the same
 
 '''
 class TorchFittedQAgent(FittedQAgent):
