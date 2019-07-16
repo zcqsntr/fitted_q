@@ -15,7 +15,7 @@ sys.path.append(C_DIR)
 from chemostat_envs import *
 from fitted_Q_agents import *
 
-param_path = os.path.join(C_DIR, 'parameter_files', 'simple_example_params.yaml')
+
 
 
 import yaml
@@ -48,7 +48,7 @@ def test_trajectory():
     print(fig_6_reward_function(np.array([250, 510]), None, None))
     print(fig_6_reward_function(np.array([300, 550]), None, None))
     print(fig_6_reward_function(np.array([300, 50]), None, None))
-    param_file = '/Users/ntreloar/Desktop/Projects/summer/chemostat_env/parameter_files/smaller_target.yaml'
+    param_file = '/Users/ntreloar/Desktop/Projects/summer/chemostat_env/parameter_files/smaller_target_no_LV.yaml'
 
 
     update_timesteps = 1

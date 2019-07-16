@@ -52,7 +52,7 @@ def fig_6_reward_function_new(state, action, next_state):
     done = False
 
 
-    if any(state < 10):
+    if any(state < 1):
         reward = - 1
         done = True
 
@@ -63,7 +63,7 @@ param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs.yaml')
 save_path = 'mutation_exp'
 
 update_timesteps = 1
-sampling_time = 1/60
+sampling_time = 0.5
 delta_mode = False
 tmax = 10000
 explore_rate = 0.1
@@ -80,6 +80,7 @@ test_r = np.array([t[2] for t in trajectory])
 test_a = np.array([t[1] for t in trajectory])
 values = np.array(agent.values)
 
+np.save(save_path + '/values.npy', values)
 env.plot_trajectory([0,1])
 os.makedirs(save_path, exist_ok = True)
 plt.savefig(save_path + '/populations.png')

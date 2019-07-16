@@ -154,8 +154,8 @@ class FittedQAgent():
         # try RMSprop and adam and maybe some from here https://arxiv.org/abs/1609.04747
         #self.reset_weights()
 
-        loss = self.fit(inputs, targets)
-        self.total_loss += loss
+        self.fit(inputs, targets)
+
 
     def run_episode(self, env, explore_rate, tmax, train = True, render = False):
         # run trajectory with current policy and add to memory
@@ -273,10 +273,10 @@ class FittedQAgent():
             # update Q function online
             if train:
                 print(len(self.memory))
-                if len(self.memory) > 60:
+                if len(self.memory) > 5:
                     self.memory = self.memory[1:]
                 self.memory.append(transition)
-                self.online_Q_learning_update(transition)
+                self.online_fitted_Q_update(transition)
 
 
             state = next_state

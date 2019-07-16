@@ -182,8 +182,8 @@ class ChemostatEnv():
         # change N1 growth rate if it has mutated.
 
 
-        t0 = 300 # time when mutation occurs
-        t_col = 600 # time for mutated colony to colonise chemostat
+        t0 = 5 # time when mutation occurs
+        t_col = 10 # time for mutated colony to colonise chemostat
         increase = 0.1
 
         if t0 < self.sSol.shape[0] < t0 + t_col:
@@ -265,7 +265,7 @@ class ChemostatEnv():
 
     def plot_trajectory(self, indices= [0,1]): #NO
 
-        plt.figure(figsize = (16.0,12.0))
+        plt.figure()
         xSol = np.array(self.sSol)
 
         for i in indices:
