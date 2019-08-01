@@ -92,6 +92,25 @@ def fig_6_reward_function_new_target(state, action, next_state):
 
     return reward, done
 
+def fig_6_reward_function_new_target_two_step(state, action, next_state):
+
+    N1_targ = 250
+    N2_targ = 700
+    targ = np.array([N1_targ, N2_targ])
+    current_state = state[2:4]
+    SE = sum(np.abs(current_state-targ))
+
+    reward = (1 - sum(SE/targ)/2)/10
+
+    done = False
+
+    if any(current_state < 1):
+        reward = - 1
+        done = True
+
+    return reward, done
+
+
 
 def entry():
     '''
@@ -113,18 +132,18 @@ def entry():
 
 def run_test(save_path):
     param_path = os.path.join(C_DIR, 'parameter_files/new_target_good_ICs.yaml')
-    update_timesteps = 1
+    update_timesteps = 2
     max_sampling_time = 3
     delta_mode = False
     tmax = 1000
-    n_episodes = 1
+    n_episodes = 100
     train_times = []
     train_rewards = []
     test_times = []
     test_rewards = []
     env = ChemostatEnv(param_path, max_sampling_time, update_timesteps, delta_mode)
 
-    agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species], cost_function = fig_6_reward_function_new_target)
+    agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species], cost_function = fig_6_reward_function_new_target_two_step)
     #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/new_target/repeat9/saved_network.h5')
     #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/results/100eps/training_on_random/saved_network.h5')
 
