@@ -124,7 +124,7 @@ class FittedQAgent():
         #
         #tf.initialize_all_variables() # resinitialise netowrk without adding to tensorflow graph
         # try RMSprop and adam and maybe some from here https://arxiv.org/abs/1609.04747
-        self.reset_weights()
+        #self.reset_weights()
 
         history = self.fit(inputs, targets)
         print('---------', history.history['loss'][-1])
@@ -147,7 +147,7 @@ class FittedQAgent():
 
         loss = self.fit(state.reshape(1, -1), values.reshape(1, -1))
 
-    def online_fitted_Q_update(self, transition):
+    def online_fitted_Q_update(self):
         inputs, targets = self.get_inputs_targets_online()
         #
         #tf.initialize_all_variables() # resinitialise netowrk without adding to tensorflow graph
@@ -155,7 +155,6 @@ class FittedQAgent():
         #self.reset_weights()
 
         self.fit(inputs, targets)
-
 
     def run_episode(self, env, explore_rate, tmax, train = True, render = False):
         # run trajectory with current policy and add to memory
@@ -202,7 +201,7 @@ class FittedQAgent():
 
         #env.plot_trajectory()
         #plt.show()
-        return trajectory, episode_reward
+        return env.sSol, episode_reward
 
     def run_online_episode(self, env, explore_rate, tmax, train = True, render = False):
         # run trajectory with current policy and add to memory
@@ -229,15 +228,19 @@ class FittedQAgent():
             transition = (state, action, reward, next_state, done)
 
             # update Q function online
-            if train:
-                #self.memory.append(transition)
-                self.online_Q_learning_update(transition)
+
 
 
             state = next_state
             trajectory.append(transition)
 
             if done: break
+
+        self.memory = trajectory
+        if train:
+            #self.memory.append(transition)
+            self.online_fitted_Q_update()
+
 
         self.episode_lengths.append(i)
         print(actions)
@@ -261,7 +264,7 @@ class FittedQAgent():
             action = self.get_action(state, explore_rate)
             actions.append(action)
 
-            next_state, reward, done, info = env.step_mutation_experiment(action)
+            next_state, reward, done, info = env.step(action)
 
             #cost = -cost # as cartpole default returns a reward
             assert len(next_state) == self.state_size, 'env return state of wrong size'
@@ -273,10 +276,13 @@ class FittedQAgent():
             # update Q function online
             if train:
                 print(len(self.memory))
+
+                '''
                 if len(self.memory) > 5:
                     self.memory = self.memory[1:]
+                '''
                 self.memory.append(transition)
-                self.online_fitted_Q_update(transition)
+                #self.online_fitted_Q_update()
 
 
             state = next_state

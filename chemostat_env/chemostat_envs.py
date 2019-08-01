@@ -306,7 +306,7 @@ class SingleAuxotrophChemostatEnv(ChemostatEnv):
 
         # convert to numpy
 
-        u1= self.umax[0]*(C0/ (self.Km0[0] + C0));
+        u1 = self.umax[0]*(C0/ (self.Km0[0] + C0));
         u2 = (self.umax[1]*C/ (self.Km + C)) * (C0/ (self.Km0[1] + C0));
 
         return np.array([u1, u2])
