@@ -114,24 +114,26 @@ def entry():
 def run_test(save_path):
     param_path = os.path.join(C_DIR, 'parameter_files/new_target_good_ICs.yaml')
     update_timesteps = 1
-    sampling_time = 3
+    max_sampling_time = 3
     delta_mode = False
     tmax = 1000
-    n_episodes = 10
+    n_episodes = 1
     train_times = []
     train_rewards = []
     test_times = []
     test_rewards = []
-    env = ChemostatEnv(param_path, sampling_time, update_timesteps, delta_mode)
+    env = ChemostatEnv(param_path, max_sampling_time, update_timesteps, delta_mode)
 
     agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species], cost_function = fig_6_reward_function_new_target)
-    agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/new_target/repeat9/saved_network.h5')
+    #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/new_target/repeat9/saved_network.h5')
     #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/results/100eps/training_on_random/saved_network.h5')
 
     for i in range(n_episodes):
+        sampling_time = max(max_sampling_time * (1-i/n_episodes), 0.16667)
 
         env = ChemostatEnv(param_path, sampling_time, update_timesteps, delta_mode)
         print('EPISODE: ', i)
+        print('Sampling Time: ', sampling_time)
         print('train: ')
         # training EPISODE
         #explore_rate = 0

@@ -57,51 +57,81 @@ def fig_6_reward_function_two_step(state, action, next_state):
 
     return reward, done
 
+def fig_6_reward_function_new(state, action, next_state):
 
-param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs.yaml')
+    N1_targ = 250
+    N2_targ = 550
+    targ = np.array([N1_targ, N2_targ])
 
-save_path = 'use_trained_agent'
+    SE = sum(np.abs(state-targ))
 
-update_timesteps = 1
-sampling_time = 4
-delta_mode = False
-tmax = 1000
-explore_rate = 0
-
-env = ChemostatEnv(param_path, sampling_time, update_timesteps, delta_mode)
-
-agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species], cost_function = fig_6_reward_function)
-agent.predict(np.array([0,0]))
-
-agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/decaying_sample_time/repeat1/saved_network.h5')
-#agent.save_network_tensorflow(os.path.dirname(os.path.abspath(__file__)) + '/100eps/training_on_random/')
-#agent.load_network_tensorflow('/Users/Neythen/Desktop/summer/fitted_Q_iteration/chemostat/100eps/training_on_random')
-
-trajectory = agent.run_online_episode(env, explore_rate, tmax, train = False)
-test_r = np.array([t[2] for t in trajectory])
-test_a = np.array([t[1] for t in trajectory])
-values = np.array(agent.values)
-
-env.plot_trajectory([0,1])
-os.makedirs(save_path, exist_ok = True)
-plt.savefig(save_path + '/populations.png')
-np.save(save_path + '/trajectory.npy', env.sSol)
+    reward = (1 - sum(SE/targ)/2)/10
+    done = False
 
 
-plt.figure()
-plt.plot(test_r)
-np.save(save_path + '/rewards.npy', test_r)
-plt.savefig(save_path + '/rewards.png')
+    if any(state < 1):
+        reward = - 1
+        done = True
+
+    return reward, done
 
 
-plt.figure()
-plt.plot(test_a)
-np.save(save_path + '/actions.npy', test_a)
-plt.savefig(save_path + '/actions.png')
+param_path = os.path.join(C_DIR, 'parameter_files/new_target_good_ICs.yaml')
 
-plt.figure()
-for i in range(4):
-    plt.plot(values[:, i], label = 'action ' + str(i))
-plt.legend()
+sampling_times = [0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0]
 
-plt.savefig(save_path + '/values.png')
+for sampling_time in sampling_times:
+    print(sampling_time)
+    update_timesteps = 1
+
+    save_path = 'use_trained_agent/sampling_time' + str(sampling_time)
+    delta_mode = False
+    tmax = int(1000/sampling_time)
+    explore_rate = 0
+
+    env = ChemostatEnv(param_path, sampling_time, update_timesteps, delta_mode)
+
+    agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species], cost_function = fig_6_reward_function_new)
+    agent.predict(np.array([0,0]))
+
+    agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/new_target/repeat9/saved_network.h5')
+    #agent.save_network_tensorflow(os.path.dirname(os.path.abspath(__file__)) + '/100eps/training_on_random/')
+    #agent.load_network_tensorflow('/Users/Neythen/Desktop/summer/fitted_Q_iteration/chemostat/100eps/training_on_random')
+
+    trajectory = agent.run_online_episode(env, explore_rate, tmax, train = False)
+    test_r = np.array([t[2] for t in trajectory])
+    test_a = np.array([t[1] for t in trajectory])
+    values = np.array(agent.values)
+
+
+    os.makedirs(save_path, exist_ok = True)
+
+
+    plt.figure()
+    plt.plot(np.linspace(0, 1000, 1000/sampling_time+1), env.sSol[:,0], label = 'N1')
+    plt.plot(np.linspace(0, 1000, 1000/sampling_time+1), env.sSol[:,1], label = 'N2')
+    plt.xlabel('Time (hours)')
+    plt.ylabel('Population ($10^6 cell L^{-1}$)')
+    plt.hlines([250, 700], 0, 1000, color = 'g')
+    plt.ylim(bottom = 0)
+    plt.savefig(save_path + '/populations.png')
+    np.save(save_path + '/trajectory.npy', env.sSol)
+
+
+    plt.figure()
+    plt.plot(test_r)
+    np.save(save_path + '/rewards.npy', test_r)
+    plt.savefig(save_path + '/rewards.png')
+
+
+    plt.figure()
+    plt.plot(test_a)
+    np.save(save_path + '/actions.npy', test_a)
+    plt.savefig(save_path + '/actions.png')
+
+    plt.figure()
+    for i in range(4):
+        plt.plot(values[:, i], label = 'action ' + str(i))
+    plt.legend()
+
+    plt.savefig(save_path + '/values.png')
