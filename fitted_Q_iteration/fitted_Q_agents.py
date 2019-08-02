@@ -212,8 +212,8 @@ class FittedQAgent():
 
         print('n_vars: ', len(tf.all_variables()))
 
+        episode_reward = 0
         for i in range(tmax):
-            print(i)
             if render: env.render()
             action = self.get_action(state, explore_rate)
             actions.append(action)
@@ -224,12 +224,11 @@ class FittedQAgent():
             assert len(next_state) == self.state_size, 'env return state of wrong size'
 
             reward, done = self.transition_cost(state, action, next_state) # use this for custom transition cost
+            episode_reward += reward
 
             transition = (state, action, reward, next_state, done)
 
             # update Q function online
-
-
 
             state = next_state
             trajectory.append(transition)
@@ -247,7 +246,7 @@ class FittedQAgent():
 
         #env.plot_trajectory()
         #plt.show()
-        return trajectory
+        return env.sSol, episode_reward
 
     def run_mutation_episode(self, env, explore_rate, tmax, train = True, render = False):
         # run trajectory with current policy and add to memory

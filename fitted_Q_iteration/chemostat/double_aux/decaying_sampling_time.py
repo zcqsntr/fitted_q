@@ -135,8 +135,8 @@ def run_test(save_path):
     update_timesteps = 2
     max_sampling_time = 3
     delta_mode = False
-    tmax = 1000
-    n_episodes = 100
+    tmax = 100
+    n_episodes = 3
     train_times = []
     train_rewards = []
     test_times = []
@@ -161,7 +161,8 @@ def run_test(save_path):
         print(explore_rate)
         env.reset()
         #env.state = (np.random.uniform(-0.5, 0.5), 0, np.random.uniform(-0.5, 0.5), 0)
-        train_trajectory, train_r = agent.run_episode(env, explore_rate, tmax)
+        train_trajectory, train_r = agent.run_online_episode(env, explore_rate, int(tmax/sampling_time))
+        print('train rewward: ', train_r)
         train_times.append(len(train_trajectory))
         train_rewards.append(train_r)
 
@@ -179,7 +180,7 @@ def run_test(save_path):
         print('test: ')
         env.reset()
         #env.state = (np.random.uniform(-1, 1), 0, np.random.uniform(-0.5, 0.5), 0)
-        test_trajectory, test_r = agent.run_episode(env, explore_rate, tmax, train = False)
+        test_trajectory, test_r = agent.run_online_episode(env, explore_rate, int(tmax/sampling_time), train = False)
         print('Test Time: ', len(test_trajectory))
 
         test_times.append(len(test_trajectory))
@@ -256,6 +257,15 @@ def run_test(save_path):
     plt.figure()
     plt.plot(train_rewards)
     plt.savefig(save_path + '/train_rewards.png')
+
+    plt.figure()
+    for i in range(4):
+        plt.plot(values[:, i], label = 'action ' + str(i))
+    plt.legend()
+
+    plt.savefig(save_path + '/values.png')
+
+
 
 
     # test trained policy with smaller time step
