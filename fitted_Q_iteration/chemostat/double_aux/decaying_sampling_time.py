@@ -136,7 +136,7 @@ def run_test(save_path):
     max_sampling_time = 3
     delta_mode = False
     tmax = 100
-    n_episodes = 3
+    n_episodes = 1000
     train_times = []
     train_rewards = []
     test_times = []
@@ -258,6 +258,7 @@ def run_test(save_path):
     plt.plot(train_rewards)
     plt.savefig(save_path + '/train_rewards.png')
 
+    values = np.array(agent.values)
     plt.figure()
     for i in range(4):
         plt.plot(values[:, i], label = 'action ' + str(i))
