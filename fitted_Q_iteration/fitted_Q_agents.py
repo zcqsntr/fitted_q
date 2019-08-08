@@ -34,6 +34,17 @@ class FittedQAgent():
             values = self.predict(state)
             self.values.append(values)
             action = np.argmax(values)
+
+        '''
+        if state[0] < 50:
+            action = 2
+        if state[1] < 50:
+            action = 1
+
+        if state[0] < 50 and state[1] < 50:
+            action = 3
+        '''
+
         assert action < self.n_actions, 'Invalid action'
         return action
 
@@ -114,7 +125,7 @@ class FittedQAgent():
         # predicted_Qs is the minimum Q_value for the next state in every transition in memory
         # targets is the transition cost of every transition in memory + y*predicted_Qs
 
-
+        print(inputs.shape, targets.shape)
         assert inputs.shape[1] == self.state_size, 'inputs to network wrong size'
         assert targets.shape[1] == self.n_actions, 'targets for network wrong size'
         return inputs, targets
@@ -124,7 +135,7 @@ class FittedQAgent():
         #
         #tf.initialize_all_variables() # resinitialise netowrk without adding to tensorflow graph
         # try RMSprop and adam and maybe some from here https://arxiv.org/abs/1609.04747
-        #self.reset_weights()
+        self.reset_weights()
 
         history = self.fit(inputs, targets)
         print('---------', history.history['loss'][-1])
@@ -188,7 +199,7 @@ class FittedQAgent():
         self.episode_rewards.append(episode_reward)
         print(actions)
         print('reward:', episode_reward)
-
+        print('memory size:', len(self.memory))
         if train:
             self.memory.append(trajectory)
 
@@ -281,7 +292,10 @@ class FittedQAgent():
                     self.memory = self.memory[1:]
                 '''
                 self.memory.append(transition)
-                #self.online_fitted_Q_update()
+
+                # bootstrap with new data
+                for _ in range(10):
+                    self.online_fitted_Q_update()
 
 
             state = next_state
