@@ -23,8 +23,8 @@ import matplotlib.pyplot as plt
 
 def fig_6_reward_function(state, action, next_state):
 
-    N1_targ = 250
-    N2_targ = 550
+    N1_targ = 15000
+    N2_targ = 25000
     targ = np.array([N1_targ, N2_targ])
 
     SE = sum(np.abs(state-targ))
@@ -34,34 +34,52 @@ def fig_6_reward_function(state, action, next_state):
     if reward < 0:
         print('Reward smaller than 0: ', reward)
 
-    if any(state < 10):
+    if any(state < 1000):
+        reward = - 1
+        done = True
+
+    return reward, done
+
+
+def no_LV_reward_function_new_target(state, action, next_state):
+
+    N1_targ = 15000
+    N2_targ = 25000
+    targ = np.array([N1_targ, N2_targ])
+
+    SE = sum(np.abs(state-targ))
+
+    reward = (1 - sum(SE/targ)/2)/10
+    done = False
+
+
+    if any(state < 100):
         reward = - 1
         done = True
 
     return reward, done
 
 def test_trajectory():
-    print('REWARDS: ')
-    print(fig_6_reward_function(np.array([250, 550]), None, None))
-    print(fig_6_reward_function(np.array([250, 500]), None, None))
-    print(fig_6_reward_function(np.array([260, 500]), None, None))
-    print(fig_6_reward_function(np.array([250, 510]), None, None))
-    print(fig_6_reward_function(np.array([300, 550]), None, None))
-    print(fig_6_reward_function(np.array([300, 50]), None, None))
-    param_file = '/Users/ntreloar/Desktop/Projects/summer/chemostat_env/parameter_files/smaller_target_no_LV.yaml'
+
+    param_file = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs_no_LV.yaml')
 
 
     update_timesteps = 1
-    sampling_time = 1
+    one_min = 0.016666666667
+    sampling_time = one_min*10
     env = ChemostatEnv(param_file, sampling_time, update_timesteps, False)
     rew = 0
 
     actions = []
     for i in range(1000):
+        a = 3
 
-        a = np.random.choice(range(4))
+        if i % 10 == 0:
+            a = np.random.choice(range(4))
 
         #a = 3
+
+
         #print(a)
         '''
         a = 3
@@ -74,7 +92,17 @@ def test_trajectory():
         #a = 2
 
         state = env.get_state()
-        r, done = fig_6_reward_function(state, None, None)
+        '''
+        a = 0
+
+        if state[0] < 15000:
+            a = 2
+        elif state[1] < 25000:
+            a = 1
+        if state[0] < 15000 and state[1] < 25000:
+            a = 3
+        '''
+        r, done = no_LV_reward_function_new_target(state, None, None)
         print(r)
         rew += r
         env.step(a)
@@ -84,7 +112,8 @@ def test_trajectory():
         actions.append(a)
     print(actions)
 
-    env.plot_trajectory([0,1,2,3,4])
+    env.plot_trajectory([0,1])
+    env.plot_trajectory([2,3,4])
     plt.show()
 
     print(rew)

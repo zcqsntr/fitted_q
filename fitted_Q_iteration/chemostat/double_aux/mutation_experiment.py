@@ -17,7 +17,6 @@ from chemostat_envs import *
 from fitted_Q_agents import *
 
 
-
 def fig_6_reward_function(state, action, next_state):
     # make everything negative here
     N1_targ = 250
@@ -58,20 +57,38 @@ def fig_6_reward_function_new(state, action, next_state):
 
     return reward, done
 
-param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs.yaml')
+def fig_6_reward_function_new_target(state, action, next_state):
+
+    N1_targ = 250
+    N2_targ = 700
+    targ = np.array([N1_targ, N2_targ])
+
+    SE = sum(np.abs(state-targ))
+
+    reward = (1 - sum(SE/targ)/2)/10
+    done = False
+
+
+    if any(state < 1):
+        reward = - 1
+        done = True
+
+    return reward, done
+
+param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs_mutation.yaml')
 
 save_path = 'mutation_exp'
 
 update_timesteps = 1
-sampling_time = 1/60
+sampling_time = 3
 delta_mode = False
-tmax = 10000
-explore_rate = 0
+tmax = 100
+explore_rate = 0.
 
 env = ChemostatEnv(param_path, sampling_time, update_timesteps, delta_mode)
 
-agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species], cost_function = fig_6_reward_function_new)
-agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/new_reward_func_good_ICs_decaying_exp_rate/repeat14/saved_network.h5')
+agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species], cost_function = fig_6_reward_function_new_target)
+agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/new_target/repeat9/saved_network.h5')
 #agent.save_network_tensorflow(os.path.dirname(os.path.abspath(__file__)) + '/100eps/training_on_random/')
 #agent.load_network_tensorflow('/Users/Neythen/Desktop/summer/fitted_Q_iteration/chemostat/100eps/training_on_random')
 

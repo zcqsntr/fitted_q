@@ -164,6 +164,7 @@ class ChemostatEnv():
 
     def step(self, action):
         Cin = self.action_to_Cin(action)
+
         self.Cins.append(Cin)
 
         ts = [0, self.sampling_time]
@@ -270,7 +271,8 @@ class ChemostatEnv():
 
         for i in indices:
             plt.plot(np.linspace(0, len(xSol[:,0]) ,len(xSol[:,0])), xSol[:,i], label = self.labels[i])
-
+            plt.ylim(bottom=0)
+            plt.ylim(top=100000)
         plt.legend()
 
 

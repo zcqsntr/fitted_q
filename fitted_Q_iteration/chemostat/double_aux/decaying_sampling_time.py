@@ -136,7 +136,7 @@ def run_test(save_path):
     max_sampling_time = 3
     delta_mode = False
     tmax = 100
-    n_episodes = 1000
+    n_episodes = 100
     train_times = []
     train_rewards = []
     test_times = []
@@ -148,7 +148,7 @@ def run_test(save_path):
     #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/results/100eps/training_on_random/saved_network.h5')
 
     for i in range(n_episodes):
-        sampling_time = max(max_sampling_time * (1-i/n_episodes), 0.16667)
+        sampling_time = max(max_sampling_time * (1-i/n_episodes), 0.016667)
 
         env = ChemostatEnv(param_path, sampling_time, update_timesteps, delta_mode)
         print('EPISODE: ', i)
@@ -161,7 +161,7 @@ def run_test(save_path):
         print(explore_rate)
         env.reset()
         #env.state = (np.random.uniform(-0.5, 0.5), 0, np.random.uniform(-0.5, 0.5), 0)
-        train_trajectory, train_r = agent.run_online_episode(env, explore_rate, int(tmax/sampling_time))
+        train_trajectory, train_r = agent.run_online_episode(env, explore_rate, max(1000, int(tmax/sampling_time)))
         print('train rewward: ', train_r)
         train_times.append(len(train_trajectory))
         train_rewards.append(train_r)
@@ -180,7 +180,7 @@ def run_test(save_path):
         print('test: ')
         env.reset()
         #env.state = (np.random.uniform(-1, 1), 0, np.random.uniform(-0.5, 0.5), 0)
-        test_trajectory, test_r = agent.run_online_episode(env, explore_rate, int(tmax/sampling_time), train = False)
+        test_trajectory, test_r = agent.run_online_episode(env, explore_rate, max(1000, int(tmax/sampling_time)), train = False)
         print('Test Time: ', len(test_trajectory))
 
         test_times.append(len(test_trajectory))

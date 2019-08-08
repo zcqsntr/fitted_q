@@ -104,34 +104,39 @@ for sampling_time in sampling_times:
     values = np.array(agent.values)
 
 
-    os.makedirs(save_path, exist_ok = True)
+os.makedirs(save_path, exist_ok = True)
 
 
-    plt.figure()
-    plt.plot(np.linspace(0, 1000, 1000/sampling_time+1), env.sSol[:,0], label = 'N1')
-    plt.plot(np.linspace(0, 1000, 1000/sampling_time+1), env.sSol[:,1], label = 'N2')
-    plt.xlabel('Time (hours)')
-    plt.ylabel('Population ($10^6 cell L^{-1}$)')
-    plt.hlines([250, 700], 0, 1000, color = 'g')
-    plt.ylim(bottom = 0)
-    plt.savefig(save_path + '/populations.png')
-    np.save(save_path + '/trajectory.npy', env.sSol)
+plt.figure()
+plt.plot(np.linspace(0, 1000, 1000/sampling_time+1), env.sSol[:,0], label = 'N1')
+plt.plot(np.linspace(0, 1000, 1000/sampling_time+1), env.sSol[:,1], label = 'N2')
+plt.xlabel('Time (hours)')
+plt.ylabel('Population ($10^6 cell L^{-1}$)')
+plt.hlines([250, 700], 0, 1000, color = 'g')
+plt.ylim(bottom = 0)
+plt.savefig(save_path + '/populations.png')
+np.save(save_path + '/trajectory.npy', env.sSol)
 
 
-    plt.figure()
-    plt.plot(test_r)
-    np.save(save_path + '/rewards.npy', test_r)
-    plt.savefig(save_path + '/rewards.png')
+plt.figure()
+plt.plot(test_r)
+np.save(save_path + '/rewards.npy', test_r)
+plt.savefig(save_path + '/rewards.png')
 
 
-    plt.figure()
-    plt.plot(test_a)
-    np.save(save_path + '/actions.npy', test_a)
-    plt.savefig(save_path + '/actions.png')
+plt.figure()
+plt.plot(test_a)
+np.save(save_path + '/actions.npy', test_a)
+plt.savefig(save_path + '/actions.png')
 
-    plt.figure()
-    for i in range(4):
-        plt.plot(values[:, i], label = 'action ' + str(i))
-    plt.legend()
+plt.figure()
+for i in range(4):
+    plt.plot(values[:, i], label = 'action ' + str(i))
+plt.legend()
 
-    plt.savefig(save_path + '/values.png')
+plt.savefig(save_path + '/values.png')
+
+plt.figure()
+plt.plot(test_a)
+np.save(save_path + '/actions.npy', test_a)
+plt.savefig(save_path + '/actions.png')

@@ -92,6 +92,59 @@ def fig_6_reward_function_new_target(state, action, next_state):
 
     return reward, done
 
+def fig_6_reward_function_new_target_two_step(state, action, next_state):
+
+    N1_targ = 250
+    N2_targ = 700
+    targ = np.array([N1_targ, N2_targ])
+    state = state[2:4]
+    SE = sum(np.abs(state-targ))
+
+    reward = (1 - sum(SE/targ)/2)/10
+    done = False
+
+
+    if any(state < 1):
+        reward = - 1
+        done = True
+
+    return reward, done
+
+def no_LV_reward_function_new_target(state, action, next_state):
+
+    N1_targ = 15000
+    N2_targ = 25000
+    targ = np.array([N1_targ, N2_targ])
+    SE = sum(np.abs(state-targ))
+
+    reward = (1 - sum(SE/targ)/2)/10
+    done = False
+
+
+    if any(state < 100):
+        reward = - 1
+        done = True
+
+    return reward, done
+
+def no_LV_reward_function_new_target_two_step(state, action, next_state):
+
+    N1_targ = 15000
+    N2_targ = 25000
+    targ = np.array([N1_targ, N2_targ])
+    state = state[2:4]
+    SE = sum(np.abs(state-targ))
+
+    reward = (1 - sum(SE/targ)/2)/10
+    done = False
+
+
+    if any(state < 100):
+        reward = - 1
+        done = True
+
+    return reward, done
+
 
 def entry():
     '''
@@ -112,20 +165,23 @@ def entry():
 
 
 def run_test(save_path):
-    param_path = os.path.join(C_DIR, 'parameter_files/new_target_good_ICs.yaml')
+    param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs_no_LV.yaml')
     update_timesteps = 1
-    sampling_time = 3
+    one_min = 0.016666666667
+    n_mins = 10
+
+    sampling_time = n_mins*one_min
     delta_mode = False
-    tmax = 1000
-    n_episodes = 10
+    tmax = int((24*60)/n_mins) # set this to 24 hours
+    n_episodes = 20
     train_times = []
     train_rewards = []
     test_times = []
     test_rewards = []
     env = ChemostatEnv(param_path, sampling_time, update_timesteps, delta_mode)
 
-    agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species], cost_function = fig_6_reward_function_new_target)
-    agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/new_target/repeat9/saved_network.h5')
+    agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species], cost_function = no_LV_reward_function_new_target)
+    #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/new_target/repeat9/saved_network.h5')
     #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/results/100eps/training_on_random/saved_network.h5')
 
     for i in range(n_episodes):
@@ -143,6 +199,7 @@ def run_test(save_path):
         train_trajectory, train_r = agent.run_episode(env, explore_rate, tmax)
         train_times.append(len(train_trajectory))
         train_rewards.append(train_r)
+
 
         '''
         env.reset()
@@ -164,8 +221,9 @@ def run_test(save_path):
         test_times.append(len(test_trajectory))
         test_rewards.append(test_r)
         print(test_rewards)
+
         '''
-        if test_r > 30:
+        if test_r > 10:
             env.plot_trajectory([0,1])
             plt.show()
         '''
@@ -235,6 +293,14 @@ def run_test(save_path):
     plt.figure()
     plt.plot(train_rewards)
     plt.savefig(save_path + '/train_rewards.png')
+
+    values = np.array(agent.values)
+    plt.figure()
+    for i in range(4):
+        plt.plot(values[:, i], label = 'action ' + str(i))
+    plt.legend()
+
+    plt.savefig(save_path + '/values.png')
 
 
     # test trained policy with smaller time step
