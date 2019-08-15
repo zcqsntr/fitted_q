@@ -105,6 +105,23 @@ def fig_6_reward_function_new_target_two_step(state, action, next_state):
 
     return reward, done
 
+def no_LV_reward_function_new_target(state, action, next_state):
+
+    N1_targ = 20000
+    N2_targ = 30000
+    targ = np.array([N1_targ, N2_targ])
+    SE = sum(np.abs(state-targ))
+
+    reward = (1 - sum(SE/targ)/2)/10
+    done = False
+
+
+    if any(state < 100):
+        reward = - 1
+        done = True
+
+    return reward, done
+
 def entry():
     '''
     Entry point for command line application handle the parsing of arguments and runs the relevant agent
@@ -124,17 +141,21 @@ def entry():
 
 
 def run_test(save_path):
-    param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs.yaml')
-    update_timesteps = 2
+    param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs_no_LV.yaml')
+    update_timesteps = 1
     delta_mode = False
     tmax = 1000
     n_episodes = 1
-    sampling_time = 2
+    one_min = 0.016666666667
+    n_mins = 10
+
+    sampling_time = n_mins*one_min
+    tmax = int((24*60)/n_mins)
     times = []
     rewards = []
     env = ChemostatEnv(param_path, sampling_time, update_timesteps, delta_mode)
 
-    agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_controlled_species*env.num_Cin_states], cost_function = fig_6_reward_function_two_step)
+    agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_controlled_species*env.num_Cin_states], cost_function = no_LV_reward_function_new_target)
 
 
     # generate data, need to turn update Q off for this
@@ -150,6 +171,7 @@ def run_test(save_path):
         env.reset()
         #env.state = (np.random.uniform(-0.5, 0.5), 0, np.random.uniform(-0.5, 0.5), 0)
         trajectory, train_r = agent.run_episode(env, explore_rate, tmax, train= True)
+
         env.plot_trajectory([0,1])
         plt.show()
     print('number of training points: ', len(trajectory))
@@ -157,18 +179,27 @@ def run_test(save_path):
 
     # train iteratively on data
     train_rs = []
+    losses = []
     for i in range(100):
         print('EPISODE: ', i)
         history = agent.fitted_Q_update()
         print()
-        #print(history.history['loss'])
+
 
         if i%10 == 0:
             explore_rate = 0
             env.reset()
             trajectory, train_r = agent.run_episode(env, explore_rate, tmax, train= False)
+            if train_r > 9:
+                env.plot_trajectory([0,1])
+                plt.show()
+            losses.append(history.history['loss'])
             train_rs.append(train_r)
 
+    plt.figure()
+    plt.plot(losses)
+    plt.figure()
+    plt.plot(train_rs)
     print(train_r)
 
     explore_rate = 0

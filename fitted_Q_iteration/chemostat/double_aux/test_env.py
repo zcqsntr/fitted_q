@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 def fig_6_reward_function(state, action, next_state):
 
     N1_targ = 15000
-    N2_targ = 25000
+    N2_targ = 30000
     targ = np.array([N1_targ, N2_targ])
 
     SE = sum(np.abs(state-targ))
@@ -44,7 +44,7 @@ def fig_6_reward_function(state, action, next_state):
 def no_LV_reward_function_new_target(state, action, next_state):
 
     N1_targ = 15000
-    N2_targ = 25000
+    N2_targ = 30000
     targ = np.array([N1_targ, N2_targ])
 
     SE = sum(np.abs(state-targ))
@@ -53,7 +53,7 @@ def no_LV_reward_function_new_target(state, action, next_state):
     done = False
 
 
-    if any(state < 100):
+    if any(state < 1000):
         reward = - 1
         done = True
 
@@ -67,20 +67,14 @@ def test_trajectory():
     update_timesteps = 1
     one_min = 0.016666666667
     sampling_time = one_min*10
-    env = ChemostatEnv(param_file, sampling_time, update_timesteps, False)
+    env = ChemostatEnv(param_file, no_LV_reward_function_new_target, sampling_time, update_timesteps, 1000, False)
     rew = 0
 
     actions = []
     for i in range(1000):
+        a = np.random.choice(range(4))
+
         a = 3
-
-        if i % 10 == 0:
-            a = np.random.choice(range(4))
-
-        #a = 3
-
-
-        #print(a)
         '''
         a = 3
         if i == 400:

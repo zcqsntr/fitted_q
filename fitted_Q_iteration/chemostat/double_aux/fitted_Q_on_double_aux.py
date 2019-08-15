@@ -112,8 +112,8 @@ def fig_6_reward_function_new_target_two_step(state, action, next_state):
 
 def no_LV_reward_function_new_target(state, action, next_state):
 
-    N1_targ = 15000
-    N2_targ = 25000
+    N1_targ = 10000
+    N2_targ = 20000
     targ = np.array([N1_targ, N2_targ])
     SE = sum(np.abs(state-targ))
 
@@ -121,7 +121,7 @@ def no_LV_reward_function_new_target(state, action, next_state):
     done = False
 
 
-    if any(state < 100):
+    if any(state < 1000):
         reward = - 1
         done = True
 
@@ -129,8 +129,8 @@ def no_LV_reward_function_new_target(state, action, next_state):
 
 def no_LV_reward_function_new_target_two_step(state, action, next_state):
 
-    N1_targ = 15000
-    N2_targ = 25000
+    N1_targ = 10000
+    N2_targ = 20000
     targ = np.array([N1_targ, N2_targ])
     state = state[2:4]
     SE = sum(np.abs(state-targ))
@@ -139,12 +139,11 @@ def no_LV_reward_function_new_target_two_step(state, action, next_state):
     done = False
 
 
-    if any(state < 100):
+    if any(state < 1000):
         reward = - 1
         done = True
 
     return reward, done
-
 
 def entry():
     '''
@@ -163,30 +162,30 @@ def entry():
     print(save_path)
     run_test(save_path)
 
-
 def run_test(save_path):
     param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs_no_LV.yaml')
     update_timesteps = 1
     one_min = 0.016666666667
-    n_mins = 10
+    n_mins = 5
 
     sampling_time = n_mins*one_min
     delta_mode = False
     tmax = int((24*60)/n_mins) # set this to 24 hours
-    n_episodes = 20
+    tmax = 1000
+    print('tmax: ', tmax)
+    n_episodes = 50
     train_times = []
     train_rewards = []
     test_times = []
     test_rewards = []
-    env = ChemostatEnv(param_path, sampling_time, update_timesteps, delta_mode)
+    pop_scaling = 100000
+    env = ChemostatEnv(param_path, no_LV_reward_function_new_target, sampling_time, update_timesteps, pop_scaling, delta_mode)
 
-    agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species], cost_function = no_LV_reward_function_new_target)
+    agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species])
     #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/new_target/repeat9/saved_network.h5')
     #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/results/100eps/training_on_random/saved_network.h5')
 
     for i in range(n_episodes):
-
-        env = ChemostatEnv(param_path, sampling_time, update_timesteps, delta_mode)
         print('EPISODE: ', i)
         print('train: ')
         # training EPISODE
@@ -200,16 +199,23 @@ def run_test(save_path):
         train_times.append(len(train_trajectory))
         train_rewards.append(train_r)
 
+        values = np.array(agent.values)
 
         '''
-        env.reset()
-        explore_rate = 0.1
-        #env.state = (np.random.uniform(-0.5, 0.5), 0, np.random.uniform(-0.5, 0.5), 0)
-        trajectory, train_r = agent.run_episode(env, explore_rate, tmax, train = True)
+        plt.figure()
+        for i in range(4):
+            plt.plot(values[:, i], label = 'action ' + str(i))
+        plt.legend()
 
-        #hint_to_goal(agent.network, agent.optimiser)
-        print('Train Time: ', len(trajectory))
+        plt.figure()
+
+        plt.plot(agent.single_ep_reward)
+
+        env.plot_trajectory([0,1])
+
+        plt.show()
         '''
+
         # testing EPISODE
         explore_rate = 0
         print('test: ')
@@ -217,6 +223,7 @@ def run_test(save_path):
         #env.state = (np.random.uniform(-1, 1), 0, np.random.uniform(-0.5, 0.5), 0)
         test_trajectory, test_r = agent.run_episode(env, explore_rate, tmax, train = False)
         print('Test Time: ', len(test_trajectory))
+
 
         test_times.append(len(test_trajectory))
         test_rewards.append(test_r)
@@ -232,14 +239,14 @@ def run_test(save_path):
     os.makedirs(save_path, exist_ok = True)
 
     # use trained policy on env with smaller smaplingn time
-    sampling_time = 0.1
+    #sampling_time = 0.1
 
-    exploit_env = ChemostatEnv(param_path, sampling_time, update_timesteps, delta_mode)
+    exploit_env = ChemostatEnv(param_path, no_LV_reward_function_new_target, sampling_time, update_timesteps, pop_scaling, delta_mode)
     # testing EPISODE
     explore_rate = 0
     print('test: ')
     exploit_env.reset()
-    tmax = 4000
+    tmax = 100
     #env.state = (np.random.uniform(-1, 1), 0, np.random.uniform(-0.5, 0.5), 0)
     exploit_trajectory, exploit_r = agent.run_episode(exploit_env, explore_rate, tmax, train = False)
     exploit_env.plot_trajectory([0,1]) # the last test_trajectory
@@ -302,6 +309,19 @@ def run_test(save_path):
 
     plt.savefig(save_path + '/values.png')
 
+    print(env.sSol)
+    print()
+    values = np.array(agent.values)
+
+    pred_rewards = []
+    print(len(values))
+    print(len(agent.actions))
+    for i in range(len(values)):
+        action_values = values[i]
+        action_taken = agent.actions[i]
+        pred_rewards.append(action_values[action_taken])
+    print(pred_rewards)
+    print(agent.single_ep_reward)
 
     # test trained policy with smaller time step
 

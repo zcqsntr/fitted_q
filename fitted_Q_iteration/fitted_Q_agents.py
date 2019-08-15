@@ -30,6 +30,9 @@ class FittedQAgent():
 
         if np.random.random() < explore_rate:
             action = np.random.choice(range(self.layer_sizes[-1]))
+            # remove this when not debugging
+            values = self.predict(state)
+            self.values.append(values)
         else:
             values = self.predict(state)
             self.values.append(values)
@@ -71,7 +74,7 @@ class FittedQAgent():
 
 
             if not done:
-                values[action] = cost + self.gamma*np.max(next_values) # could introduce step size here, maybe not needed for neural agent
+                values[action] = cost + self.gamma*tf.stop_gradient(np.max(next_values)) # could introduce step size here, maybe not needed for neural agent
             else:
                 values[action] = cost
 
@@ -98,12 +101,15 @@ class FittedQAgent():
                 inputs.append(state)
                 # construct target
                 values = self.predict(state)
+
+
                 next_values = self.predict(next_state)
 
                 assert len(values) == self.n_actions, 'neural network returning wrong number of values'
                 assert len(next_values) == self.n_actions, 'neural network returning wrong number of values'
 
                 #update the value for the taken action using cost function and current Q
+
                 if not done:
                     values[action] = cost + self.gamma*np.max(next_values) # could introduce step size here, maybe not needed for neural agent
                 else:
@@ -113,6 +119,7 @@ class FittedQAgent():
 
         # shuffle inputs and target for IID
         inputs, targets  = np.array(inputs), np.array(targets)
+
 
         # shuffle works
         randomize = np.arange(len(inputs))
@@ -138,7 +145,7 @@ class FittedQAgent():
         self.reset_weights()
 
         history = self.fit(inputs, targets)
-        print('---------', history.history['loss'][-1])
+        print('losses: ', history.history['loss'][0], history.history['loss'][-1])
         return history
         #print('loss:', history.history)
 
@@ -152,7 +159,7 @@ class FittedQAgent():
 
         #update the value for the taken action using cost function and current Q
         if not done:
-            values[action] = cost + self.gamma*np.max(next_values) # could introduce step size here, maybe not needed for neural agent
+            values[action] = values[action] + cost + self.gamma*np.max(next_values) # could introduce step size here, maybe not needed for neural agent
         else:
             values[action] = cost
 
@@ -171,24 +178,30 @@ class FittedQAgent():
         # run trajectory with current policy and add to memory
         trajectory = []
         actions = []
-        state = np.array(env.get_state())
+        self.values = []
+        state = np.array(env.reset())
         print('initial state: ', state)
         episode_reward = 0
         print('n_vars: ', len(tf.all_variables()))
-
+        self.single_ep_reward = []
         for i in range(tmax):
             if render: env.render()
             action = self.get_action(state, explore_rate)
+
             actions.append(action)
 
             next_state, reward, done, info = env.step(action)
-
             #cost = -cost # as cartpole default returns a reward
             assert len(next_state) == self.state_size, 'env return state of wrong size'
 
-            reward, done = self.transition_cost(state, action, next_state) # use this for custom transition cost
+
+            self.single_ep_reward.append(reward)
             if done:
                 print(reward)
+
+            # scale populations
+
+
             transition = (state, action, reward, next_state, done)
             state = next_state
             trajectory.append(transition)
@@ -197,6 +210,7 @@ class FittedQAgent():
 
         self.episode_lengths.append(i)
         self.episode_rewards.append(episode_reward)
+        self.actions = actions
         print(actions)
         print('reward:', episode_reward)
         print('memory size:', len(self.memory))
@@ -370,30 +384,28 @@ class FittedQAgent():
         return rate
 
 class KerasFittedQAgent(FittedQAgent):
-    def __init__(self, layer_sizes = [2,20,20,4], cost_function = False):
+    def __init__(self, layer_sizes = [2,20,20,4]):
         self.memory = []
         self.layer_sizes = layer_sizes
         self.network = self.initialise_network(layer_sizes)
-        self.gamma = 0.95
+        self.gamma = 0.9
         self.state_size = layer_sizes[0]
         self.n_actions = layer_sizes[-1]
         self.episode_lengths = []
         self.episode_rewards = []
+        self.single_ep_reward = []
         self.total_loss = 0
         self.values = []
 
-        print(cost_function)
-        if cost_function:
-            self.transition_cost = cost_function
-
     def initialise_network(self, layer_sizes): #YES
 
+        tf.keras.backend.clear_session()
         initialiser = keras.initializers.RandomUniform(minval = -0.5, maxval = 0.5, seed = None)
         network = keras.Sequential([
             keras.layers.InputLayer([layer_sizes[0]]),
-            keras.layers.Dense(layer_sizes[1], activation = tf.nn.sigmoid, kernel_initializer = initialiser),
-            keras.layers.Dense(layer_sizes[2], activation = tf.nn.sigmoid, kernel_initializer = initialiser),
-            keras.layers.Dense(layer_sizes[3], kernel_initializer = initialiser) # linear output layer
+            keras.layers.Dense(layer_sizes[1], activation = tf.nn.relu),
+            keras.layers.Dense(layer_sizes[2], activation = tf.nn.relu),
+            keras.layers.Dense(layer_sizes[3]) # linear output layer
         ])
 
         network.compile(optimizer = 'adam', loss = 'mean_squared_error') # TRY DIFFERENT OPTIMISERS

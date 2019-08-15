@@ -11,7 +11,7 @@ class ChemostatEnv():
 
     '''
 
-    def __init__(self, param_file, sampling_time, update_timesteps, delta_mode):
+    def __init__(self, param_file, reward_func, sampling_time, update_timesteps, scaling, delta_mode):
 
         f = open(param_file)
         param_dict = yaml.load(f)
@@ -29,6 +29,8 @@ class ChemostatEnv():
         self.delta_mode = delta_mode
         self.state = self.get_state()
         self.sampling_time = sampling_time
+        self.reward_func = reward_func
+        self.scaling = scaling
 
     def convert_to_numpy(self,param_dict):
         '''
@@ -176,8 +178,9 @@ class ChemostatEnv():
         self.sSol = np.append(self.sSol, self.S.reshape(1,len(self.S)), axis = 0)
         self.state = self.get_state()
 
-        return self.state, None, None, None
+        reward, done = self.reward_func(self.state, None,None) # use this for custom transition cost
 
+        return self.state/self.scaling, reward, done, None
 
     def step_mutation_experiment(self, action):
         # change N1 growth rate if it has mutated.
@@ -242,6 +245,7 @@ class ChemostatEnv():
         return np.clip(Cin, 0, 0.1)
 
     def reset(self,initial_S = False): #No
+
         if not initial_S:
             self.S = np.array(self.initial_S)
         else:
@@ -258,7 +262,7 @@ class ChemostatEnv():
         if self.delta_mode:
             return np.append(Ns, Cins)
         else:
-            return np.array(Ns)
+            return np.array(Ns)/self.scaling
 
     def pad(self,array, n_zeros):
         array = np.append([0]*n_zeros, array)
@@ -271,11 +275,8 @@ class ChemostatEnv():
 
         for i in indices:
             plt.plot(np.linspace(0, len(xSol[:,0]) ,len(xSol[:,0])), xSol[:,i], label = self.labels[i])
-            plt.ylim(bottom=0)
-            plt.ylim(top=100000)
+        plt.ylim(bottom=0)
         plt.legend()
-
-
 
     def save_trajectory(save_path):
         np.save(save_path + '/final_trajectory', self.sSol)
