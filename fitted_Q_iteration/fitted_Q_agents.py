@@ -145,7 +145,7 @@ class FittedQAgent():
         self.reset_weights()
 
         history = self.fit(inputs, targets)
-        print('losses: ', history.history['loss'][0], history.history['loss'][-1])
+        print('losses: ', history.history['loss'], history.history['loss'][-1])
         return history
         #print('loss:', history.history)
 
@@ -178,7 +178,7 @@ class FittedQAgent():
         # run trajectory with current policy and add to memory
         trajectory = []
         actions = []
-        self.values = []
+        #self.values = []
         state = np.array(env.reset())
         print('initial state: ', state)
         episode_reward = 0
@@ -193,7 +193,6 @@ class FittedQAgent():
             next_state, reward, done, info = env.step(action)
             #cost = -cost # as cartpole default returns a reward
             assert len(next_state) == self.state_size, 'env return state of wrong size'
-
 
             self.single_ep_reward.append(reward)
             if done:
@@ -388,7 +387,7 @@ class KerasFittedQAgent(FittedQAgent):
         self.memory = []
         self.layer_sizes = layer_sizes
         self.network = self.initialise_network(layer_sizes)
-        self.gamma = 0.9
+        self.gamma = 0.
         self.state_size = layer_sizes[0]
         self.n_actions = layer_sizes[-1]
         self.episode_lengths = []
@@ -403,9 +402,9 @@ class KerasFittedQAgent(FittedQAgent):
         initialiser = keras.initializers.RandomUniform(minval = -0.5, maxval = 0.5, seed = None)
         network = keras.Sequential([
             keras.layers.InputLayer([layer_sizes[0]]),
-            keras.layers.Dense(layer_sizes[1], activation = tf.nn.relu),
-            keras.layers.Dense(layer_sizes[2], activation = tf.nn.relu),
-            keras.layers.Dense(layer_sizes[3]) # linear output layer
+            keras.layers.Dense(layer_sizes[1], kernel_initializer = initialiser, activation = tf.nn.relu),
+            keras.layers.Dense(layer_sizes[2], kernel_initializer = initialiser,  activation = tf.nn.relu),
+            keras.layers.Dense(layer_sizes[3], kernel_initializer = initialiser) # linear output layer
         ])
 
         network.compile(optimizer = 'adam', loss = 'mean_squared_error') # TRY DIFFERENT OPTIMISERS

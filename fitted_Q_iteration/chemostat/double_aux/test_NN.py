@@ -90,7 +90,7 @@ def run_test(save_path):
     rewards = []
 
 
-    for n_mins in [1,2,3,4,5,10]:
+    for n_mins in [5]:
         sampling_time = n_mins*one_min
         delta_mode = False
         tmax = int((24*60)/n_mins) # set this to 24 hours
@@ -146,7 +146,7 @@ def run_test(save_path):
             all_actual_rewards.append(agent.single_ep_reward)
 
 
-            '''
+
             print('pred_rewards:', pred_rewards)
             print()
             print('single_ep_reward:', agent.single_ep_reward)
@@ -155,7 +155,8 @@ def run_test(save_path):
             plt.plot(agent.single_ep_reward, label = 'actual')
             plt.plot(pred_rewards, label = 'pred')
             plt.legend()
-
+            plt.show()
+            '''
             plt.savefig(save_path + '/' + str(n_mins))
             '''
         np.save(save_path + '/' + str(n_mins) +'all_actual_r', all_actual_rewards)

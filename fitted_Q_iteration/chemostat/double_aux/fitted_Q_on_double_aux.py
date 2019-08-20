@@ -173,7 +173,7 @@ def run_test(save_path):
     tmax = int((24*60)/n_mins) # set this to 24 hours
     tmax = 1000
     print('tmax: ', tmax)
-    n_episodes = 50
+    n_episodes = 30
     train_times = []
     train_rewards = []
     test_times = []
