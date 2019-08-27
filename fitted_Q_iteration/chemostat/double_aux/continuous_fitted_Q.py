@@ -170,10 +170,10 @@ def run_test(save_path):
 
     sampling_time = n_mins*one_min
     delta_mode = False
-    tmax = int((24*60)/n_mins) # set this to 24 hours
-    #tmax = 10
+    #tmax = int((24*60)/n_mins) # set this to 24 hours
+    tmax = 10
     print('tmax: ', tmax)
-    n_episodes = 30
+    n_episodes = 10
     train_times = []
     train_rewards = []
     test_times = []
@@ -193,14 +193,16 @@ def run_test(save_path):
         explore_rate = agent.get_rate(i, 0, 1, n_episodes/10)
         #explore_rate = 1
         print(explore_rate)
-        env.reset()
-        #env.state = (np.random.uniform(-0.5, 0.5), 0, np.random.uniform(-0.5, 0.5), 0)
+        env.reset(env.S)
+        print(env.S)
+
         train_trajectory, train_r = agent.run_episode(env, explore_rate, tmax)
         train_times.append(len(train_trajectory))
         train_rewards.append(train_r)
 
         values = np.array(agent.values)
         env.plot_trajectory([0,1])
+        env.plot_trajectory([2,3,4])
         plt.show()
 
         '''
@@ -218,11 +220,12 @@ def run_test(save_path):
         plt.show()
         '''
 
+        '''
+
         # testing EPISODE
         explore_rate = 0
         print('test: ')
         env.reset()
-        #env.state = (np.random.uniform(-1, 1), 0, np.random.uniform(-0.5, 0.5), 0)
         test_trajectory, test_r = agent.run_episode(env, explore_rate, tmax, train = False)
         print('Test Time: ', len(test_trajectory))
         env.plot_trajectory([0,1])
@@ -231,7 +234,7 @@ def run_test(save_path):
         test_times.append(len(test_trajectory))
         test_rewards.append(test_r)
         print(test_rewards)
-
+        '''
         '''
         if test_r > 10:
             env.plot_trajectory([0,1])

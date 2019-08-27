@@ -183,7 +183,7 @@ class FittedQAgent():
         trajectory = []
         actions = []
         #self.values = []
-        state = np.array(env.reset())
+        state = env.get_state()/100000
         print('initial state: ', state)
         episode_reward = 0
         print('n_vars: ', len(tf.all_variables()))
@@ -229,7 +229,7 @@ class FittedQAgent():
                 self.memory = self.memory[1:]
             '''
             #self.memory = trajectory
-            for _ in range(10):
+            for _ in range(5):
                 self.fitted_Q_update()
 
         #env.plot_trajectory()
