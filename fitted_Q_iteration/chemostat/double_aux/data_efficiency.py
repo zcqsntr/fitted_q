@@ -129,8 +129,8 @@ def no_LV_reward_function_new_target(state, action, next_state):
 
 def no_LV_reward_function_new_target_two_step(state, action, next_state):
 
-    N1_targ = 20000
-    N2_targ = 30000
+    N1_targ = 10000
+    N2_targ = 20000
     targ = np.array([N1_targ, N2_targ])
     state = state[2:4]
     SE = sum(np.abs(state-targ))
@@ -185,56 +185,6 @@ def run_test(save_path):
     #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/new_target/repeat9/saved_network.h5')
     #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/results/100eps/training_on_random/saved_network.h5')
 
-    for i in range(n_episodes):
-        print('EPISODE: ', i)
-        print('train: ')
-        # training EPISODE
-        #explore_rate = 0
-        explore_rate = agent.get_rate(i, 0, 1, n_episodes/10)
-        #explore_rate = 1
-        print(explore_rate)
-        env.reset()
-        #env.state = (np.random.uniform(-0.5, 0.5), 0, np.random.uniform(-0.5, 0.5), 0)
-        train_trajectory, train_r = agent.run_episode(env, explore_rate, tmax)
-        train_times.append(len(train_trajectory))
-        train_rewards.append(train_r)
-
-        values = np.array(agent.values)
-
-        '''
-        plt.figure()
-        for i in range(4):
-            plt.plot(values[:, i], label = 'action ' + str(i))
-        plt.legend()
-
-        plt.figure()
-
-        plt.plot(agent.single_ep_reward)
-
-        env.plot_trajectory([0,1])
-
-        plt.show()
-        '''
-
-        # testing EPISODE
-        explore_rate = 0
-        print('test: ')
-        env.reset()
-        #env.state = (np.random.uniform(-1, 1), 0, np.random.uniform(-0.5, 0.5), 0)
-        test_trajectory, test_r = agent.run_episode(env, explore_rate, tmax, train = False)
-        print('Test Time: ', len(test_trajectory))
-
-
-        test_times.append(len(test_trajectory))
-        test_rewards.append(test_r)
-        print(test_rewards)
-
-        '''
-        if test_r > 10:
-            env.plot_trajectory([0,1])
-            plt.show()
-        '''
-        print()
 
     os.makedirs(save_path, exist_ok = True)
 

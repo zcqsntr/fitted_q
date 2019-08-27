@@ -19,8 +19,8 @@ from argparse import ArgumentParser
 np.set_printoptions(precision = 16)
 def no_LV_reward_function_new_target(state, action, next_state):
 
-    N1_targ = 10000
-    N2_targ = 20000
+    N1_targ = 20000
+    N2_targ = 30000
     targ = np.array([N1_targ, N2_targ])
     SE = sum(np.abs(state-targ))
 
@@ -89,14 +89,16 @@ def run_test(save_path):
     actions = []
     rewards = []
 
-    n_repeats = 3
-    for repeat in range(n_repeats):
+    n_repeats = 1
 
-        n_mins = 5
+    all_value_SSEs = []
+    for repeat in range(1,n_repeats+1):
+
+        n_mins = 30
         sampling_time = n_mins*one_min
         delta_mode = False
         tmax = int((24*60)/n_mins) # set this to 24 hours
-        tmax = 100
+        tmax = 1000
         print('tmax: ', tmax)
         train_times = []
         train_rewards = []
@@ -113,13 +115,30 @@ def run_test(save_path):
         agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species])
         train_trajectory, train_r = agent.run_episode(env, explore_rate, tmax)
 
+        n_iters = 1
+        agent.reset_weights()
 
-        for n_iters in range(1, 10, 2):
+        value_SSEs = []
 
-            agent.reset_weights()
+        plt.figure()
 
-            for i in range(n_iters):
-                history = agent.fitted_Q_update()
+
+
+        true_values = [agent.single_ep_reward[-1]]
+
+
+
+        for i in range(2,len(agent.single_ep_reward)+1):
+            true_values.insert(0, agent.single_ep_reward[-i] + true_values[0] * agent.gamma)
+
+
+        plt.plot(true_values, label = 'actual')
+
+
+        for iter in range(1,n_iters+1):
+            print()
+            print('ITER: ' + str(iter), '------------------------------------')
+            history = agent.fitted_Q_update()
 
             print('losses: ', history.history['loss'][0], history.history['loss'][-1])
             values = []
@@ -143,24 +162,58 @@ def run_test(save_path):
                 action_taken = agent.actions[i]
                 pred_rewards.append(action_values[action_taken])
 
+            # get the change from last value function to measure convergence
+            #print(all_pred_rewards)
+
+            if iter != 1:
+
+                SSE = sum((np.array(all_pred_rewards[-1]) - np.array(pred_rewards))**2)
+                print('sse:', SSE)
+                value_SSEs.append(SSE)
+
+            all_value_SSEs.append(value_SSEs)
+
             all_pred_rewards.append(pred_rewards)
             all_actual_rewards.append(agent.single_ep_reward)
 
 
 
+
+            '''
             print('pred_rewards:', pred_rewards)
             print()
             print('single_ep_reward:', agent.single_ep_reward)
-
+            '''
 
             '''
-            plt.figure()
             plt.plot(agent.single_ep_reward, label = 'actual')
             plt.plot(pred_rewards, label = 'pred')
-            plt.legend()
-            plt.title(str(n_iters))
-            plt.savefig(save_path + '/' + str(n_iters))
             '''
+
+            if iter%5 == 0:
+
+                plt.plot(pred_rewards, label = str(iter))
+
+
+        plt.legend()
+
+
+
+        values = np.array(agent.values)
+        plt.figure()
+        for i in range(4):
+            plt.plot(values[:, i], label = 'action ' + str(i))
+        plt.legend()
+
+
+
+        plt.figure()
+        plt.plot(value_SSEs)
+        plt.title('SSEs')
+            #plt.savefig(save_path + '/' + str(n_iters))
+
+
+        env.plot_trajectory([0, 1])
 
 
 
