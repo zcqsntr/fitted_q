@@ -229,8 +229,8 @@ class FittedQAgent():
                 self.memory = self.memory[1:]
             '''
             #self.memory = trajectory
-            #for _ in range(20):
-                #self.fitted_Q_update()
+            for _ in range(10):
+                self.fitted_Q_update()
 
         #env.plot_trajectory()
         #plt.show()
