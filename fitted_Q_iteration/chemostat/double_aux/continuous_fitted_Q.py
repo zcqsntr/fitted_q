@@ -173,7 +173,7 @@ def run_test(save_path):
     #tmax = int((24*60)/n_mins) # set this to 24 hours
     tmax = 10
     print('tmax: ', tmax)
-    n_episodes = 10
+    n_episodes = 50
     train_times = []
     train_rewards = []
     test_times = []
@@ -184,7 +184,8 @@ def run_test(save_path):
     agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species])
     #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/new_target/repeat9/saved_network.h5')
     #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/results/100eps/training_on_random/saved_network.h5')
-
+    overall_traj = []
+    print(env.S)
     for i in range(n_episodes):
         print('EPISODE: ', i)
         print('train: ')
@@ -193,17 +194,18 @@ def run_test(save_path):
         explore_rate = agent.get_rate(i, 0, 1, n_episodes/10)
         #explore_rate = 1
         print(explore_rate)
-        env.reset(env.S)
-        print(env.S)
+
 
         train_trajectory, train_r = agent.run_episode(env, explore_rate, tmax)
+        print(env.S)
+
+
         train_times.append(len(train_trajectory))
         train_rewards.append(train_r)
 
         values = np.array(agent.values)
-        env.plot_trajectory([0,1])
-        env.plot_trajectory([2,3,4])
-        plt.show()
+
+
 
         '''
         plt.figure()
@@ -241,6 +243,9 @@ def run_test(save_path):
             plt.show()
         '''
         print()
+    env.plot_trajectory([0,1])
+    env.plot_trajectory([2,3,4])
+    plt.show()
 
     os.makedirs(save_path, exist_ok = True)
 
@@ -319,15 +324,7 @@ def run_test(save_path):
     print()
     values = np.array(agent.values)
 
-    pred_rewards = []
-    print(len(values))
-    print(len(agent.actions))
-    for i in range(len(values)):
-        action_values = values[i]
-        action_taken = agent.actions[i]
-        pred_rewards.append(action_values[action_taken])
-    print(pred_rewards)
-    print(agent.single_ep_reward)
+
 
     # test trained policy with smaller time step
 

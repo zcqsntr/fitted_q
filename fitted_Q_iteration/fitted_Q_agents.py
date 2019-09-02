@@ -196,7 +196,6 @@ class FittedQAgent():
 
             next_state, reward, done, info = env.step(action)
 
-
             #cost = -cost # as cartpole default returns a reward
             assert len(next_state) == self.state_size, 'env return state of wrong size'
 
@@ -205,7 +204,6 @@ class FittedQAgent():
                 print(reward)
 
             # scale populations
-
 
             transition = (state, action, reward, next_state, done)
             state = next_state
@@ -229,7 +227,7 @@ class FittedQAgent():
                 self.memory = self.memory[1:]
             '''
             #self.memory = trajectory
-            for _ in range(5):
+            for _ in range(3):
                 self.fitted_Q_update()
 
         #env.plot_trajectory()
