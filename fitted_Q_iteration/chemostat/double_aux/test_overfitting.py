@@ -17,40 +17,7 @@ from fitted_Q_agents import *
 from argparse import ArgumentParser
 
 np.set_printoptions(precision = 16)
-def no_LV_reward_function_new_target(state, action, next_state):
-
-    N1_targ = 15000
-    N2_targ = 30000
-    targ = np.array([N1_targ, N2_targ])
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 1000):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-def no_LV_reward_function_new_target_two_step(state, action, next_state):
-
-    N1_targ = 10000
-    N2_targ = 20000
-    targ = np.array([N1_targ, N2_targ])
-    state = state[2:4]
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 0):
-        reward = - 1
-        done = True
-
-    return reward, done
+from double_aux_rewards import *
 
 
 def entry():
@@ -74,7 +41,7 @@ def run_test(save_path):
     param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs_no_LV.yaml')
     update_timesteps = 1
     one_min = 0.016666666667
-    n_mins = 1
+    n_mins = 5
     sampling_time = n_mins*one_min
     delta_mode = False
     tmax = 100
@@ -82,10 +49,10 @@ def run_test(save_path):
 
 
 
-    n_repeats = 100
+    n_repeats = 50
 
 
-    for tmax in [5, 10, 20, 30, 40, 50, 100, 200]:
+    for tmax in [5, 10, 20, 30, 40, 50, 100, 200, 300,500,700,1000,2000]:
 
         all_train_errors = []
         all_test_errors = []
@@ -98,7 +65,7 @@ def run_test(save_path):
         all_actual_rewards = []
 
         for repeat in range(1,n_repeats+1):
-
+            print(tmax, repeat,'------------------------------------------')
 
             sampling_time = n_mins*one_min
             delta_mode = False
@@ -124,7 +91,7 @@ def run_test(save_path):
             plt.savefig('test_trajectory.png')
 
 
-
+            env.reset()
             agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species])
             train_trajectory, train_r = agent.run_episode(env, explore_rate, tmax) # adds to agents memory
             train_actions = agent.actions
@@ -132,7 +99,7 @@ def run_test(save_path):
             env.plot_trajectory([0,1])
             plt.savefig('train_trajectory.png')
 
-            n_iters = 40
+            n_iters = 20
             train_errors = []
             test_errors = []
 
@@ -148,6 +115,9 @@ def run_test(save_path):
                 training_pred = []
                 testing_pred = []
 
+                print(len(train_trajectory[:,0:2]))
+                print(len(train_actions))
+
                 for i in range(len(train_trajectory[:,0:2])-1):
                     values = agent.predict(train_trajectory[i,0:2]/100000) # appends to agent.values
                     training_pred.append(values[train_actions[i]])
@@ -162,7 +132,7 @@ def run_test(save_path):
 
                 print('pred: ', training_pred)
                 print('actual: ', train_r)
-                print('error:', np.array(training_pred) - np.array(train_r))
+                #print('error:', np.array(training_pred) - np.array(train_r))
                 print('train error: ', sum((np.array(training_pred) - np.array(train_r))**2)/len(train_r))
                 print('test error: ', sum((np.array(testing_pred) - np.array(test_r))**2)/len(test_r))
 

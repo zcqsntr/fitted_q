@@ -17,133 +17,7 @@ from fitted_Q_agents import *
 from argparse import ArgumentParser
 
 
-# Fig 6 in preprint
-def fig_6_reward_function(state, action, next_state):
-
-    N1_targ = 250
-    N2_targ = 550
-    targ = np.array([N1_targ, N2_targ])
-
-    SSE = sum((state-targ)**2)
-
-    reward = (1 - SSE/(sum(targ**2)))/10
-
-    done = False
-
-
-    if any(state < 10):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-def fig_6_reward_function_two_step(state, action, next_state):
-
-    N1_targ = 250
-    N2_targ = 550
-    targ = np.array([N1_targ, N2_targ])
-    current_state = state[2:4]
-    SSE = sum((current_state-targ)**2)
-
-    reward = (1 - SSE/(sum(targ**2)))/10
-
-    done = False
-
-    if any(current_state < 10):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-
-def fig_6_reward_function_new(state, action, next_state):
-
-    N1_targ = 250
-    N2_targ = 550
-    targ = np.array([N1_targ, N2_targ])
-
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 1):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-def fig_6_reward_function_new_target(state, action, next_state):
-
-    N1_targ = 250
-    N2_targ = 700
-    targ = np.array([N1_targ, N2_targ])
-
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 1):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-def fig_6_reward_function_new_target_two_step(state, action, next_state):
-
-    N1_targ = 250
-    N2_targ = 700
-    targ = np.array([N1_targ, N2_targ])
-    state = state[2:4]
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 1):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-def no_LV_reward_function_new_target(state, action, next_state):
-
-    N1_targ = 20000
-    N2_targ = 30000
-    targ = np.array([N1_targ, N2_targ])
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 1000):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-def no_LV_reward_function_new_target_two_step(state, action, next_state):
-
-    N1_targ = 20000
-    N2_targ = 30000
-    targ = np.array([N1_targ, N2_targ])
-    state = state[2:4]
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 1000):
-        reward = - 1
-        done = True
-
-    return reward, done
+from double_aux_rewards import *
 
 def entry():
     '''
@@ -165,15 +39,15 @@ def entry():
 def run_test(save_path):
     param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs_no_LV.yaml')
     update_timesteps = 1
+    n_mins = 4
     one_min = 0.016666666667
-    n_mins = 5
 
     sampling_time = n_mins*one_min
     delta_mode = False
     #tmax = int((24*60)/n_mins) # set this to 24 hours
     tmax = 10
     print('tmax: ', tmax)
-    n_episodes = 50
+    n_episodes = 36
     train_times = []
     train_rewards = []
     test_times = []
@@ -184,14 +58,59 @@ def run_test(save_path):
     agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species])
     #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/new_target/repeat9/saved_network.h5')
     #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/results/100eps/training_on_random/saved_network.h5')
+
+    # REWARD CLAMPING:
+    inputs = []
+    targets = []
+
+    n_data_points = 1000
+
+    # generate inputs and targets where both strains are low
+    for i in range(int(n_data_points/4)):
+        inputs.append([np.random.uniform(0, 15000/100000), np.random.uniform(0, 25000/100000)])
+        targets.append([0, 0, 0, 0.5])
+
+    # generate inputs and targets where both strains are high
+    for i in range(int(n_data_points/4)):
+        inputs.append([np.random.uniform(25000/100000, 40000/100000), np.random.uniform(35000/100000, 50000/100000)])
+        targets.append([0.5, 0, 0, 0])
+
+
+    # generate inputs and targets where N1 is low, N2 is high
+    for i in range(int(n_data_points/4)):
+        inputs.append([np.random.uniform(0, 15000/100000), np.random.uniform(35000/100000, 50000/100000)])
+        targets.append([0, 0, 0.5, 0])
+
+
+    # generate inputs and targets where N1 is high, N2 is low
+    for i in range(int(n_data_points/4)):
+        inputs.append([np.random.uniform(25000/100000, 40000/100000), np.random.uniform(0, 25000/100000)])
+        targets.append([0, 0.5, 0, 0])
+
+    inputs, targets  = np.array(inputs), np.array(targets)
+    #shuffle inputs and targets
+    randomize = np.arange(len(inputs))
+    np.random.shuffle(randomize)
+    inputs = inputs[randomize]
+    targets = targets[randomize]
+    print(inputs.shape, targets.shape)
+
+    for i in range(20):
+        agent.fitted_Q_update(inputs, targets)
+
+
     overall_traj = []
     print(env.S)
-    for i in range(n_episodes):
+    for i in range(20):
+        print()
         print('EPISODE: ', i)
         print('train: ')
         # training EPISODE
-        #explore_rate = 0
-        explore_rate = agent.get_rate(i, 0, 1, n_episodes/10)
+        #
+        agent.memory = []
+
+        explore_rate = agent.get_rate(i, 0.05, 0.5, n_episodes/10)
+
         #explore_rate = 1
         print(explore_rate)
 
@@ -204,6 +123,10 @@ def run_test(save_path):
         train_rewards.append(train_r)
 
         values = np.array(agent.values)
+
+    for i in range(0):
+        train_trajectory, train_r = agent.run_episode(env, 0, tmax)
+
 
 
 
@@ -244,7 +167,9 @@ def run_test(save_path):
         '''
         print()
     env.plot_trajectory([0,1])
+    plt.hlines([20000, 30000], 0, 400, color = 'g', label = 'target')
     env.plot_trajectory([2,3,4])
+
     plt.show()
 
     os.makedirs(save_path, exist_ok = True)
@@ -261,6 +186,7 @@ def run_test(save_path):
     #env.state = (np.random.uniform(-1, 1), 0, np.random.uniform(-0.5, 0.5), 0)
     exploit_trajectory, exploit_r = agent.run_episode(exploit_env, explore_rate, tmax, train = False)
     exploit_env.plot_trajectory([0,1]) # the last test_trajectory
+    plt.hlines([20000, 30000], 0, 400, color = 'g', label = 'target')
     plt.savefig(save_path + '/exploit_populations.png')
     np.save(save_path + '/exploit_trajectory.npy', exploit_trajectory)
 
@@ -320,7 +246,7 @@ def run_test(save_path):
 
     plt.savefig(save_path + '/values.png')
 
-    print(env.sSol)
+
     print()
     values = np.array(agent.values)
 

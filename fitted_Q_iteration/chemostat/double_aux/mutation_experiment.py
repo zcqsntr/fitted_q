@@ -16,64 +16,7 @@ sys.path.append(C_DIR)
 from chemostat_envs import *
 from fitted_Q_agents import *
 
-
-def fig_6_reward_function(state, action, next_state):
-    # make everything negative here
-    N1_targ = 250
-    N2_targ = 550
-    targ = np.array([N1_targ, N2_targ])
-
-    SSE = sum((state-targ)**2)
-
-    reward = (1 - SSE/(sum(targ**2)))/10
-    done = False
-
-    '''
-    if any(state < 20): # try and prevent extinction
-        reward = - 1
-    '''
-
-    if any(state < 1):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-def fig_6_reward_function_new(state, action, next_state):
-
-    N1_targ = 250
-    N2_targ = 550
-    targ = np.array([N1_targ, N2_targ])
-
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 1):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-def fig_6_reward_function_new_target(state, action, next_state):
-
-    N1_targ = 250
-    N2_targ = 700
-    targ = np.array([N1_targ, N2_targ])
-
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 1):
-        reward = - 1
-        done = True
-
-    return reward, done
+from double_aux_rewards import *
 
 param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs_mutation.yaml')
 

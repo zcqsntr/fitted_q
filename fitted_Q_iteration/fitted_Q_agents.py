@@ -137,11 +137,11 @@ class FittedQAgent():
         assert targets.shape[1] == self.n_actions, 'targets for network wrong size'
         return inputs, targets
 
-    def fitted_Q_update(self):
+    def fitted_Q_update(self, inputs = None, targets = None):
 
 
-
-        inputs, targets = self.get_inputs_targets()
+        if inputs is None and targets is None:
+            inputs, targets = self.get_inputs_targets()
 
         #
         #tf.initialize_all_variables() # resinitialise netowrk without adding to tensorflow graph
@@ -170,20 +170,95 @@ class FittedQAgent():
         loss = self.fit(state.reshape(1, -1), values.reshape(1, -1))
 
     def online_fitted_Q_update(self):
-        inputs, targets = self.get_inputs_targets_online()
+        inputs, targets = self.get_inputs_targets()
         #
         #tf.initialize_all_variables() # resinitialise netowrk without adding to tensorflow graph
         # try RMSprop and adam and maybe some from here https://arxiv.org/abs/1609.04747
         #self.reset_weights()
 
-        self.fit(inputs, targets)
+        history = self.fit(inputs, targets)
+        print('losses: ', history.history['loss'][0], history.history['loss'][-1])
+
+    def run_exploratory_episode(self, env, explore_rate, tmax, train = True, render = False):
+        # run trajectory with current policy and add to memory
+        trajectory = []
+        actions = []
+        #self.values = []
+        state = env.get_state()/env.scaling
+        print('initial state: ', state)
+        episode_reward = 0
+        print('n_vars: ', len(tf.all_variables()))
+        self.single_ep_reward = []
+        for i in range(tmax):
+            if render: env.render()
+            action = action = np.random.choice(range(self.layer_sizes[-1]))
+
+            if i < tmax/4:
+                action = np.random.choice([action, 0])
+            elif i < tmax/2:
+                action = np.random.choice([action, 1])
+            elif i < 3*tmax/4:
+                action = np.random.choice([action, 2])
+            else:
+                action = np.random.choice([action, 3])
+
+
+            actions.append(action)
+
+            next_state, reward, done, info = env.step(action)
+
+            #cost = -cost # as cartpole default returns a reward
+            assert len(next_state) == self.state_size, 'env return state of wrong size'
+
+            self.single_ep_reward.append(reward)
+            if done:
+                print(reward)
+
+            # scale populations
+
+            transition = (state, action, reward, next_state, done)
+            state = next_state
+            trajectory.append(transition)
+            episode_reward += reward
+            if done: break
+
+
+        print(actions)
+        print('reward:', episode_reward)
+        print('memory size:', len(self.memory))
+
+        if train:
+            self.memory.append(trajectory)
+            self.actions = actions
+            self.episode_lengths.append(i)
+            self.episode_rewards.append(episode_reward)
+
+            '''
+            if len(self.memory) > 10:
+                self.memory = self.memory[1:]
+            '''
+            print('shape ', np.array(self.memory).shape)
+            #self.memory = trajectory
+            if np.array(self.memory)[:,:,0].size < 100:
+                n_iters = 4
+            elif np.array(self.memory)[:,:,0].size  < 200:
+                n_iters = 5
+            else:
+                n_iters = 10
+            n_iters = 1
+            #for _ in range(n_iters):
+            #    self.online_fitted_Q_update()
+
+        #env.plot_trajectory()
+        #plt.show()
+        return env.sSol, episode_reward
 
     def run_episode(self, env, explore_rate, tmax, train = True, render = False):
         # run trajectory with current policy and add to memory
         trajectory = []
         actions = []
         #self.values = []
-        state = env.get_state()/100000
+        state = env.get_state()/env.scaling
         print('initial state: ', state)
         episode_reward = 0
         print('n_vars: ', len(tf.all_variables()))
@@ -226,9 +301,17 @@ class FittedQAgent():
             if len(self.memory) > 10:
                 self.memory = self.memory[1:]
             '''
+            print('shape ', np.array(self.memory).shape)
             #self.memory = trajectory
-            for _ in range(3):
-                self.fitted_Q_update()
+            if np.array(self.memory)[:,:,0].size < 100:
+                n_iters = 4
+            elif np.array(self.memory)[:,:,0].size  < 200:
+                n_iters = 5
+            else:
+                n_iters = 10
+            n_iters = 1
+            #for _ in range(n_iters):
+            #    self.online_fitted_Q_update()
 
         #env.plot_trajectory()
         #plt.show()
@@ -408,6 +491,8 @@ class KerasFittedQAgent(FittedQAgent):
 
         tf.keras.backend.clear_session()
         initialiser = keras.initializers.RandomUniform(minval = -0.5, maxval = 0.5, seed = None)
+        positive_initialiser = keras.initializers.RandomUniform(minval = 0., maxval = 0.35, seed = None)
+        regulariser = keras.regularizers.l1_l2(l1=0.01, l2=0.01)
         network = keras.Sequential([
             keras.layers.InputLayer([layer_sizes[0]]),
             keras.layers.Dense(layer_sizes[1], activation = tf.nn.relu),

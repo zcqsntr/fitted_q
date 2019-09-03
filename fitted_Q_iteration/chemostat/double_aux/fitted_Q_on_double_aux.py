@@ -16,134 +16,7 @@ from chemostat_envs import *
 from fitted_Q_agents import *
 from argparse import ArgumentParser
 
-
-# Fig 6 in preprint
-def fig_6_reward_function(state, action, next_state):
-
-    N1_targ = 250
-    N2_targ = 550
-    targ = np.array([N1_targ, N2_targ])
-
-    SSE = sum((state-targ)**2)
-
-    reward = (1 - SSE/(sum(targ**2)))/10
-
-    done = False
-
-
-    if any(state < 10):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-def fig_6_reward_function_two_step(state, action, next_state):
-
-    N1_targ = 250
-    N2_targ = 550
-    targ = np.array([N1_targ, N2_targ])
-    current_state = state[2:4]
-    SSE = sum((current_state-targ)**2)
-
-    reward = (1 - SSE/(sum(targ**2)))/10
-
-    done = False
-
-    if any(current_state < 10):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-
-def fig_6_reward_function_new(state, action, next_state):
-
-    N1_targ = 250
-    N2_targ = 550
-    targ = np.array([N1_targ, N2_targ])
-
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 1):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-def fig_6_reward_function_new_target(state, action, next_state):
-
-    N1_targ = 250
-    N2_targ = 700
-    targ = np.array([N1_targ, N2_targ])
-
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 1):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-def fig_6_reward_function_new_target_two_step(state, action, next_state):
-
-    N1_targ = 250
-    N2_targ = 700
-    targ = np.array([N1_targ, N2_targ])
-    state = state[2:4]
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 1):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-def no_LV_reward_function_new_target(state, action, next_state):
-
-    N1_targ = 20000
-    N2_targ = 30000
-    targ = np.array([N1_targ, N2_targ])
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 1000):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-def no_LV_reward_function_new_target_two_step(state, action, next_state):
-
-    N1_targ = 20000
-    N2_targ = 30000
-    targ = np.array([N1_targ, N2_targ])
-    state = state[2:4]
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 1000):
-        reward = - 1
-        done = True
-
-    return reward, done
+from double_aux_rewards import *
 
 def entry():
     '''
@@ -173,7 +46,7 @@ def run_test(save_path):
     tmax = int((24*60)/n_mins) # set this to 24 hours
     #tmax = 10
     print('tmax: ', tmax)
-    n_episodes = 30
+    n_episodes = 1
     train_times = []
     train_rewards = []
     test_times = []
@@ -198,10 +71,11 @@ def run_test(save_path):
         train_trajectory, train_r = agent.run_episode(env, explore_rate, tmax)
         train_times.append(len(train_trajectory))
         train_rewards.append(train_r)
+        train_actions = np.array(agent.actions)
 
         values = np.array(agent.values)
         env.plot_trajectory([0,1])
-        plt.show()
+
 
         '''
         plt.figure()
@@ -224,9 +98,10 @@ def run_test(save_path):
         env.reset()
         #env.state = (np.random.uniform(-1, 1), 0, np.random.uniform(-0.5, 0.5), 0)
         test_trajectory, test_r = agent.run_episode(env, explore_rate, tmax, train = False)
+        test_actions = np.array(agent.actions)
         print('Test Time: ', len(test_trajectory))
         env.plot_trajectory([0,1])
-        plt.show()
+
 
         test_times.append(len(test_trajectory))
         test_rewards.append(test_r)
@@ -255,6 +130,7 @@ def run_test(save_path):
     exploit_env.plot_trajectory([0,1]) # the last test_trajectory
     plt.savefig(save_path + '/exploit_populations.png')
     np.save(save_path + '/exploit_trajectory.npy', exploit_trajectory)
+    np.save(save_path + '/exploit_actions.npy', np.array(agent.actions))
 
 
     test_rewards = np.array(test_rewards)
@@ -267,6 +143,8 @@ def run_test(save_path):
     np.save(save_path + '/train_rewards.npy', train_rewards)
     np.save(save_path + '/test_times.npy', test_times)
     np.save(save_path + '/train_times.npy', train_times)
+    np.save(save_path + '/test_actions.npy', test_actions)
+    np.save(save_path + '/train_actions.npy', train_actions)
 
     agent.save_network(save_path)
 
@@ -316,15 +194,7 @@ def run_test(save_path):
     print()
     values = np.array(agent.values)
 
-    pred_rewards = []
-    print(len(values))
-    print(len(agent.actions))
-    for i in range(len(values)):
-        action_values = values[i]
-        action_taken = agent.actions[i]
-        pred_rewards.append(action_values[action_taken])
-    print(pred_rewards)
-    print(agent.single_ep_reward)
+    
 
     # test trained policy with smaller time step
 

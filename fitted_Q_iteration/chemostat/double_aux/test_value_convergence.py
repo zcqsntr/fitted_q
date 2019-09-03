@@ -17,40 +17,7 @@ from fitted_Q_agents import *
 from argparse import ArgumentParser
 
 np.set_printoptions(precision = 16)
-def no_LV_reward_function_new_target(state, action, next_state):
-
-    N1_targ = 15000
-    N2_targ = 30000
-    targ = np.array([N1_targ, N2_targ])
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 1000):
-        reward = - 1
-        done = True
-
-    return reward, done
-
-def no_LV_reward_function_new_target_two_step(state, action, next_state):
-
-    N1_targ = 10000
-    N2_targ = 20000
-    targ = np.array([N1_targ, N2_targ])
-    state = state[2:4]
-    SE = sum(np.abs(state-targ))
-
-    reward = (1 - sum(SE/targ)/2)/10
-    done = False
-
-
-    if any(state < 0):
-        reward = - 1
-        done = True
-
-    return reward, done
+from double_aux_rewards import *
 
 
 def entry():
