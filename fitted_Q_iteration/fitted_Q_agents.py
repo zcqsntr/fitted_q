@@ -29,6 +29,7 @@ class FittedQAgent():
 
 
         if np.random.random() < explore_rate:
+            #action = np.random.choice([1,2])
             action = np.random.choice(range(self.layer_sizes[-1]))
             # remove this when not debugging
             #values = self.predict(state)
@@ -169,15 +170,19 @@ class FittedQAgent():
 
         loss = self.fit(state.reshape(1, -1), values.reshape(1, -1))
 
-    def online_fitted_Q_update(self):
-        inputs, targets = self.get_inputs_targets()
+    def online_fitted_Q_update(self,inputs = None, targets = None):
+
+        if inputs is None and targets is None:
+            inputs, targets = self.get_inputs_targets()
+
         #
         #tf.initialize_all_variables() # resinitialise netowrk without adding to tensorflow graph
         # try RMSprop and adam and maybe some from here https://arxiv.org/abs/1609.04747
         #self.reset_weights()
-
+        self.load_network(self.saved)
         history = self.fit(inputs, targets)
         print('losses: ', history.history['loss'][0], history.history['loss'][-1])
+        return history
 
     def run_exploratory_episode(self, env, explore_rate, tmax, train = True, render = False):
         # run trajectory with current policy and add to memory
@@ -289,10 +294,12 @@ class FittedQAgent():
 
         print(actions)
         print('reward:', episode_reward)
-        print('memory size:', len(self.memory))
+
 
         if train:
             self.memory.append(trajectory)
+            print(len(self.memory))
+            print('memory size:', len(self.memory[0]))
             self.actions = actions
             self.episode_lengths.append(i)
             self.episode_rewards.append(episode_reward)
@@ -303,15 +310,18 @@ class FittedQAgent():
             '''
             print('shape ', np.array(self.memory).shape)
             #self.memory = trajectory
-            if np.array(self.memory)[:,:,0].size < 100:
+            #print(trajectory)
+
+            if len(self.memory[0]) * len(self.memory) < 100:
                 n_iters = 4
-            elif np.array(self.memory)[:,:,0].size  < 200:
+            elif len(self.memory[0]) * len(self.memory) < 200:
                 n_iters = 5
             else:
                 n_iters = 10
-            n_iters = 1
-            #for _ in range(n_iters):
-            #    self.online_fitted_Q_update()
+
+
+            for _ in range(n_iters):
+                self.online_fitted_Q_update()
 
         #env.plot_trajectory()
         #plt.show()
@@ -487,6 +497,7 @@ class KerasFittedQAgent(FittedQAgent):
         self.total_loss = 0
         self.values = []
 
+
     def initialise_network(self, layer_sizes): #YES
 
         tf.keras.backend.clear_session()
@@ -536,11 +547,12 @@ class KerasFittedQAgent(FittedQAgent):
 
 
     def load_network(self, load_path): #tested
-
+        print()
+        print(load_path + '/saved_network.h5')
         try:
-            self.network = keras.models.load_model(load_path) # sometimes this crashes, apparently a bug in keras
+            self.network = keras.models.load_model(load_path + '/saved_network.h5') # sometimes this crashes, apparently a bug in keras
         except:
-            self.network.load_weights(load_path) # this requires model to be initialised exactly the same
+            self.network.load_weights(load_path + '/saved_network.h5') # this requires model to be initialised exactly the same
 
 '''
 class TorchFittedQAgent(FittedQAgent):

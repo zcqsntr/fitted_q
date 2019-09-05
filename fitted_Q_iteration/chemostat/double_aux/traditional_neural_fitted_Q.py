@@ -37,88 +37,105 @@ def entry():
     print(save_path)
     run_test(save_path)
 
+def get_sum_squared_error(target, trajectory):
+    target = np.array(target)
+
+    print(trajectory.shape)
+    Ns = trajectory[:,0:2]
+    SSE = sum(sum(np.absolute(Ns - target)))
+    return SSE
+
 
 def run_test(save_path):
     param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs_no_LV.yaml')
     update_timesteps = 1
     delta_mode = False
     tmax = 1000
-
-    n_episodes = 10
+    og_save = save_path
+    n_episodes = 30
     one_min = 0.016666666667
-    n_mins = 5
+
     pop_scaling = 100000
+    SSEs = []
+    for n_mins in [1,5,10,15,20,25,30,40,50,60]:
+        save_path = og_save + '/'+str(n_mins)+'_minutes'
+        os.makedirs(save_path, exist_ok = True)
+        sampling_time = n_mins*one_min
+        tmax = int((24*60)/n_mins)
+        times = []
+        rewards = []
 
-    sampling_time = n_mins*one_min
-    tmax = int((24*60)/n_mins)
-    times = []
-    rewards = []
+        env = ChemostatEnv(param_path, no_LV_reward_function_new_target, sampling_time, update_timesteps, pop_scaling, delta_mode)
 
-    env = ChemostatEnv(param_path, no_LV_reward_function_new_target, sampling_time, update_timesteps, pop_scaling, delta_mode)
-
-    agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_controlled_species*env.num_Cin_states])
-
-
-    # generate data, need to turn update Q off for this
-    for i in range(n_episodes):
-        print('EPISODE: ', i)
-
-        # training EPISODE
-        #explore_rate = 0
-        #explore_rate = agent.get_rate(i, 0, 1, 2.5)
-        explore_rate = 1
-        print(explore_rate)
-
-        env.reset()
-        #env.state = (np.random.uniform(-0.5, 0.5), 0, np.random.uniform(-0.5, 0.5), 0)
-        trajectory, train_r = agent.run_episode(env, explore_rate, tmax, train= True)
-
-        #env.plot_trajectory([0,1])
-        #plt.show()
-    print('number of training points: ', len(trajectory))
+        agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_controlled_species*env.num_Cin_states])
 
 
-    # train iteratively on data
-    train_rs = []
-    losses = []
-    for i in range(50):
-        print('EPISODE: ', i)
-        history = agent.fitted_Q_update()
-        print()
+        # generate data, need to turn update Q off for this
+        for i in range(n_episodes):
+            print('EPISODE: ', i)
+
+            # training EPISODE
+            #explore_rate = 0
+            #explore_rate = agent.get_rate(i, 0, 1, 2.5)
+            explore_rate = 1
+            print(explore_rate)
+
+            env.reset()
+            #env.state = (np.random.uniform(-0.5, 0.5), 0, np.random.uniform(-0.5, 0.5), 0)
+            trajectory, train_r = agent.run_episode(env, explore_rate, tmax, train= True)
+
+
+        print('number of training points: ', len(trajectory))
+
+
+        # train iteratively on data
+        train_rs = []
+        losses = []
+
+        for i in range(20):
+            print('EPISODE: ', i)
+            history = agent.fitted_Q_update()
+            print()
+
+            explore_rate = 0
+            env.reset()
+            trajectory, train_r = agent.run_episode(env, explore_rate, tmax, train = False)
+
+            SSE = get_sum_squared_error([20000,30000], trajectory)
+
+            if i == 0 or (SSE < min_SSE and len(trajectory) >= tmax):
+                min_SSE = SSE
+                np.save(save_path + '/trajectory_' + str(SSE), trajectory)
+                env.plot_trajectory([0,1])
+                plt.savefig(save_path +'/trajectory_' + str(SSE) +'.png')
+
+            losses.append(history.history['loss'])
+            train_rs.append(train_r)
+
+        plt.figure()
+        plt.plot(losses)
+        plt.figure()
+        plt.plot(train_rs)
+        print(train_r)
 
         explore_rate = 0
         env.reset()
-        trajectory, train_r = agent.run_episode(env, explore_rate, tmax, train = False)
-        if train_r > 25:
-            env.plot_trajectory([0,1])
-            plt.show()
-        losses.append(history.history['loss'])
-        train_rs.append(train_r)
-
-    plt.figure()
-    plt.plot(losses)
-    plt.figure()
-    plt.plot(train_rs)
-    print(train_r)
-
-    explore_rate = 0
-    env.reset()
-    trajectory, train_r = agent.run_episode(env, explore_rate, tmax, train= False)
+        trajectory, train_r = agent.run_episode(env, explore_rate, tmax, train= False)
 
 
-    rewards = np.array(rewards)
-    os.makedirs(save_path, exist_ok = True)
-    agent.save_results(save_path)
-    agent.save_network(save_path)
+        rewards = np.array(rewards)
+
+        agent.save_results(save_path)
+        agent.save_network(save_path)
 
 
-    env.plot_trajectory([0,1])
-    plt.savefig(save_path + '/populations.png')
-    np.save(save_path + '/trajectory.npy', env.sSol)
+        env.plot_trajectory([0,1])
+        plt.savefig(save_path + '/final_trajectory' + str(SSE)+'.png')
+        np.save(save_path + '/final_trajectory' + str(SSE)+'.npy', env.sSol)
 
-    plt.figure()
-    plt.plot(train_rs)
-    plt.savefig(save_path + '/episode_rewards.png')
+        plt.figure()
+        plt.plot(train_rs)
+        plt.savefig(save_path + '/episode_rewards.png')
 
 if __name__ == '__main__':
     entry()

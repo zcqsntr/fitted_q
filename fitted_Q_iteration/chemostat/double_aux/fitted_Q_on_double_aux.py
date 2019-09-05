@@ -46,7 +46,7 @@ def run_test(save_path):
     tmax = int((24*60)/n_mins) # set this to 24 hours
     #tmax = 10
     print('tmax: ', tmax)
-    n_episodes = 1
+    n_episodes = 30
     train_times = []
     train_rewards = []
     test_times = []
@@ -194,7 +194,7 @@ def run_test(save_path):
     print()
     values = np.array(agent.values)
 
-    
+
 
     # test trained policy with smaller time step
 
