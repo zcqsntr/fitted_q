@@ -1,5 +1,5 @@
-import os
 import sys
+import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 # file path for fitted_Q_agents
@@ -50,70 +50,30 @@ def run_test(save_path):
     n_episodes = 29
     train_times = []
     train_rewards = []
-    test_times = []
-    test_rewards = []
+
     pop_scaling = 100000
     os.makedirs(save_path, exist_ok = True)
+    os.makedirs(save_path + '/after_heuristic', exist_ok = True)
     env = ChemostatEnv(param_path, no_LV_reward_function_new_target, sampling_time, update_timesteps, pop_scaling, delta_mode)
 
     agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species])
 
+    agent.learn_heuristic()
 
-    # REWARD CLAMPING:
-    inputs = []
-    targets = []
-
-    n_data_points = 1000
-
-    # generate inputs and targets where both strains are low
-    for i in range(int(n_data_points/4)):
-        inputs.append([np.random.uniform(0, 15000/100000), np.random.uniform(0, 10000/100000)])
-        targets.append([0, 0, 0, 0.5])
-
-    # generate inputs and targets where both strains are high
-    for i in range(int(n_data_points/4)):
-        inputs.append([np.random.uniform(40000/100000, 50000/100000), np.random.uniform(40000/100000, 50000/100000)])
-        targets.append([0.5, 0, 0, 0])
-
-
-    # generate inputs and targets where N1 is low, N2 is high
-    for i in range(int(n_data_points/4)):
-        inputs.append([np.random.uniform(0, 10000/100000), np.random.uniform(40000/100000, 50000/100000)])
-        targets.append([0, 0, 0.5, 0])
-
-
-    # generate inputs and targets where N1 is high, N2 is low
-    for i in range(int(n_data_points/4)):
-        inputs.append([np.random.uniform(40000/100000, 50000/100000), np.random.uniform(0, 10000/100000)])
-        targets.append([0, 0.5, 0, 0])
-
-
-
-    inputs, targets  = np.array(inputs), np.array(targets)
-    #shuffle inputs and targets
-    randomize = np.arange(len(inputs))
-    np.random.shuffle(randomize)
-    inputs = inputs[randomize]
-    targets = targets[randomize]
-    print(inputs.shape, targets.shape)
-
-    for i in range(20):
-        agent.fitted_Q_update(inputs, targets)
-
-    agent.save_network(save_path)
-    agent.saved = save_path
+    agent.save_network(save_path + '/after_heuristic')
+    agent.saved = save_path + '/after_heuristic'
     print(agent.saved)
 
-    train_trajectory, train_r = agent.run_episode(env, 0, 100)
+    train_trajectory, train_r = agent.run_episode(env, 0, 100, train = False)
     env.plot_trajectory([0,1])
     plt.savefig(save_path + 'after_heuristic.png')
-
+    env.reset()
     agent.memory = []
 
 
     overall_traj = []
     print(env.S)
-    for i in range(28):
+    for i in range(n_episodes):
 
         print()
         print('EPISODE: ', i)
@@ -122,7 +82,7 @@ def run_test(save_path):
         #
         #agent.memory = []
 
-        explore_rate = agent.get_rate(i, 0.05, 0.5, n_episodes/10)
+        explore_rate = agent.get_rate(i, 0.05, 1., n_episodes/10)
 
         #explore_rate = 1
         print(explore_rate)
@@ -130,16 +90,18 @@ def run_test(save_path):
 
         train_trajectory, train_r = agent.run_episode(env, explore_rate, tmax)
         print(env.S)
-
+        os.makedirs(save_path + '/episode' + str(i), exist_ok = True)
+        agent.save_network(save_path + '/episode' + str(i))
 
         train_times.append(len(train_trajectory))
         train_rewards.append(train_r)
 
         values = np.array(agent.values)
 
-    for i in range(14):
+    for i in range(5):
         train_trajectory, train_r = agent.run_episode(env, 0, tmax)
         train_rewards.append(train_r)
+        agent.save_network(save_path + '/episode' + str(i+n_episodes))
 
         values = np.array(agent.values)
 
@@ -189,7 +151,6 @@ def run_test(save_path):
     plt.show()
 
 
-
     # use trained policy on env with smaller smaplingn time
     #sampling_time = 0.1
 
@@ -206,31 +167,13 @@ def run_test(save_path):
     plt.savefig(save_path + '/exploit_populations.png')
     np.save(save_path + '/exploit_trajectory.npy', exploit_trajectory)
 
-
-    test_rewards = np.array(test_rewards)
     train_rewards = np.array(train_rewards)
-    test_times = np.array(test_times)
-    train_times = np.array(train_times)
 
 
-    np.save(save_path + '/test_rewards.npy', test_rewards)
     np.save(save_path + '/train_rewards.npy', train_rewards)
-    np.save(save_path + '/test_times.npy', test_times)
     np.save(save_path + '/train_times.npy', train_times)
 
     agent.save_network(save_path)
-
-    plt.figure()
-    plt.plot(train_times)
-    plt.xlabel('Timestep')
-    plt.ylabel('Timesteps until terminal state')
-    plt.savefig(save_path + '/train_times.png')
-
-    plt.figure()
-    plt.plot(test_times)
-    plt.xlabel('Timestep')
-    plt.ylabel('Timesteps until terminal state')
-    plt.savefig(save_path + '/test_times.png')
 
     env.plot_trajectory([0,1]) # the last test_trajectory
     plt.savefig(save_path + '/test_populations.png')
@@ -247,9 +190,6 @@ def run_test(save_path):
     np.save(save_path + '/train_trajectory.npy', train_trajectory)
 
 
-    plt.figure()
-    plt.plot(test_rewards)
-    plt.savefig(save_path + '/test_rewards.png')
     plt.figure()
     plt.plot(train_rewards)
     plt.savefig(save_path + '/train_rewards.png')

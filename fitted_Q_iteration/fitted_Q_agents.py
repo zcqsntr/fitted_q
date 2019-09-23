@@ -196,7 +196,7 @@ class FittedQAgent():
         self.single_ep_reward = []
         for i in range(tmax):
             if render: env.render()
-            action = action = np.random.choice(range(self.layer_sizes[-1]))
+            action = np.random.choice(range(self.layer_sizes[-1]))
 
             if i < tmax/4:
                 action = np.random.choice([action, 0])
@@ -250,15 +250,15 @@ class FittedQAgent():
                 n_iters = 5
             else:
                 n_iters = 10
-            n_iters = 1
-            #for _ in range(n_iters):
-            #    self.online_fitted_Q_update()
+
+            for _ in range(n_iters):
+                self.fitted_Q_update()
 
         #env.plot_trajectory()
         #plt.show()
         return env.sSol, episode_reward
 
-    def run_episode(self, env, explore_rate, tmax, train = True, render = False):
+    def run_episode(self, env, explore_rate, tmax, train = True, remember = True):
         # run trajectory with current policy and add to memory
         trajectory = []
         actions = []
@@ -269,7 +269,7 @@ class FittedQAgent():
         print('n_vars: ', len(tf.all_variables()))
         self.single_ep_reward = []
         for i in range(tmax):
-            if render: env.render()
+
             action = self.get_action(state, explore_rate)
 
             actions.append(action)
@@ -296,8 +296,11 @@ class FittedQAgent():
         print('reward:', episode_reward)
 
 
-        if train:
+        if remember:
             self.memory.append(trajectory)
+
+        if train:
+
             print(len(self.memory))
             print('memory size:', len(self.memory[0]))
             self.actions = actions
@@ -313,15 +316,18 @@ class FittedQAgent():
             #print(trajectory)
 
             if len(self.memory[0]) * len(self.memory) < 100:
+                #n_iters = 4
                 n_iters = 4
             elif len(self.memory[0]) * len(self.memory) < 200:
+                #n_iters = 5
                 n_iters = 5
             else:
                 n_iters = 10
 
-
+            #n_iters = 0
             for _ in range(n_iters):
-                self.online_fitted_Q_update()
+
+                self.fitted_Q_update()
 
         #env.plot_trajectory()
         #plt.show()
@@ -482,6 +488,59 @@ class FittedQAgent():
         rate = max(MIN_LEARNING_RATE, min(MAX_LEARNING_RATE, 1.0 - math.log10((episode+1)/denominator)))
 
         return rate
+
+    def learn_heuristic(self):
+        # REWARD CLAMPING:
+        inputs = []
+        targets = []
+
+        n_data_points = 1000
+        pop_scaling = 100000
+        # generate inputs and targets where both strains are low
+        for i in range(int(n_data_points/4)):
+            inputs.append([np.random.uniform(0, 10000/pop_scaling), np.random.uniform(0, 10000/pop_scaling)])
+            targets.append([-0.05, -0.05, -0.05, 0.])
+
+        # generate inputs and targets where both strains are high
+        for i in range(int(n_data_points/4)):
+            inputs.append([np.random.uniform(40000/pop_scaling, 50000/pop_scaling), np.random.uniform(40000/pop_scaling, 50000/pop_scaling)])
+            targets.append([0., -0.05, -0.05, -0.05])
+
+
+        # generate inputs and targets where N1 is low, N2 is high
+        for i in range(int(n_data_points/4)):
+            inputs.append([np.random.uniform(0, 10000/pop_scaling), np.random.uniform(40000/pop_scaling, 50000/pop_scaling)])
+            targets.append([-0.05, -0.05, 0., -0.05])
+
+
+        # generate inputs and targets where N1 is high, N2 is low
+        for i in range(int(n_data_points/4)):
+            inputs.append([np.random.uniform(40000/pop_scaling, 50000/pop_scaling), np.random.uniform(0, 10000/pop_scaling)])
+            targets.append([-0.05, 0, -0.05, -0.05])
+
+
+        # generate inputs and targets where N1 is high, N2 is low
+        for i in range(int(n_data_points/4)):
+            inputs.append([np.random.uniform(40000/pop_scaling, 50000/pop_scaling), np.random.uniform(0, 10000/pop_scaling)])
+            targets.append([-0.05, 0, -0.05, -0.05])
+
+        '''
+        for i in range(int(n_data_points/4)):
+            inputs.append([np.random.uniform(19000/pop_scaling, 21000/pop_scaling), np.random.uniform(29000/pop_scaling, 31000/pop_scaling)])
+            targets.append([0.05, 0.05, 0.05, 0.05])
+        '''
+
+        inputs, targets  = np.array(inputs), np.array(targets)
+        #shuffle inputs and targets
+        randomize = np.arange(len(inputs))
+        np.random.shuffle(randomize)
+        inputs = inputs[randomize]
+        targets = targets[randomize]
+        print(inputs.shape, targets.shape)
+
+
+        for i in range(10):
+            self.fitted_Q_update(inputs, targets)
 
 class KerasFittedQAgent(FittedQAgent):
     def __init__(self, layer_sizes = [2,20,20,4]):

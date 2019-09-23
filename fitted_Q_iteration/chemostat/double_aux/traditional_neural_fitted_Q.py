@@ -50,14 +50,16 @@ def run_test(save_path):
     param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs_no_LV.yaml')
     update_timesteps = 1
     delta_mode = False
-    tmax = 1000
+
     og_save = save_path
     n_episodes = 30
     one_min = 0.016666666667
 
     pop_scaling = 100000
     SSEs = []
-    for n_mins in [1,5,10,15,20,25,30,40,50,60]:
+    #for n_mins in :
+
+    for n_mins in [1,2,3,4,5,10,20,30,40,50,60]:
         save_path = og_save + '/'+str(n_mins)+'_minutes'
         os.makedirs(save_path, exist_ok = True)
         sampling_time = n_mins*one_min
@@ -69,7 +71,10 @@ def run_test(save_path):
 
         agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_controlled_species*env.num_Cin_states])
 
-
+        #agent.learn_heuristic()
+        #os.makedirs(save_path + '/after_heuristic', exist_ok = True)
+        #agent.save_network(save_path + '/after_heuristic')
+        #agent.saved = save_path + '/after_heuristic'
         # generate data, need to turn update Q off for this
         for i in range(n_episodes):
             print('EPISODE: ', i)
@@ -82,7 +87,9 @@ def run_test(save_path):
 
             env.reset()
             #env.state = (np.random.uniform(-0.5, 0.5), 0, np.random.uniform(-0.5, 0.5), 0)
-            trajectory, train_r = agent.run_episode(env, explore_rate, tmax, train= True)
+            trajectory, train_r = agent.run_episode(env, explore_rate, tmax, train= False, remember = True)
+            os.makedirs(save_path + '/episode' + str(i), exist_ok = True)
+            #agent.save_network(save_path + '/episode' + str(i))
 
 
         print('number of training points: ', len(trajectory))
@@ -91,7 +98,7 @@ def run_test(save_path):
         # train iteratively on data
         train_rs = []
         losses = []
-
+        min_SSE = 0
         for i in range(20):
             print('EPISODE: ', i)
             history = agent.fitted_Q_update()
@@ -99,15 +106,17 @@ def run_test(save_path):
 
             explore_rate = 0
             env.reset()
-            trajectory, train_r = agent.run_episode(env, explore_rate, tmax, train = False)
+            trajectory, train_r = agent.run_episode(env, explore_rate, tmax, train = False, remember = False)
 
             SSE = get_sum_squared_error([20000,30000], trajectory)
-
+            print(SSE)
             if i == 0 or (SSE < min_SSE and len(trajectory) >= tmax):
                 min_SSE = SSE
                 np.save(save_path + '/trajectory_' + str(SSE), trajectory)
                 env.plot_trajectory([0,1])
                 plt.savefig(save_path +'/trajectory_' + str(SSE) +'.png')
+                os.makedirs(save_path + '/episode' + str(i), exist_ok = True)
+                #agent.save_network(save_path + '/episode' + str(i))
 
             losses.append(history.history['loss'])
             train_rs.append(train_r)
@@ -126,7 +135,7 @@ def run_test(save_path):
         rewards = np.array(rewards)
 
         agent.save_results(save_path)
-        agent.save_network(save_path)
+        #agent.save_network(save_path)
 
 
         env.plot_trajectory([0,1])

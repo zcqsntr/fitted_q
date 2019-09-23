@@ -1,5 +1,5 @@
-import os
 import sys
+import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
 
 # file path for fitted_Q_agents
@@ -15,6 +15,7 @@ sys.path.append(C_DIR)
 from chemostat_envs import *
 from fitted_Q_agents import *
 from argparse import ArgumentParser
+
 
 from double_aux_rewards import *
 
@@ -38,44 +39,78 @@ def entry():
 def run_test(save_path):
     param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs_no_LV.yaml')
     update_timesteps = 1
-    one_min = 0.016666666667
     n_mins = 5
-
+    n_envs = 5
+    one_min = 0.016666666667
     sampling_time = n_mins*one_min
     delta_mode = False
-    tmax = int((24*60)/n_mins) # set this to 24 hours
-    #tmax = 10
+    #tmax = int((24*60)/n_mins) # set this to 24 hours
+    tmax = 10
     print('tmax: ', tmax)
-    n_episodes = 1
+    n_episodes = 29
     train_times = []
     train_rewards = []
-    test_times = []
-    test_rewards = []
-    pop_scaling = 100000
-    env = ChemostatEnv(param_path, no_LV_reward_function_new_target, sampling_time, update_timesteps, pop_scaling, delta_mode)
 
-    agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species])
-    #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/new_target/repeat9/saved_network.h5')
-    #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/results/100eps/training_on_random/saved_network.h5')
-    train_trajectorys = []
+    pop_scaling = 100000
+    os.makedirs(save_path, exist_ok = True)
+    os.makedirs(save_path + '/after_heuristic', exist_ok = True)
+    envs = [ChemostatEnv(param_path, no_LV_reward_function_new_target, sampling_time, update_timesteps, pop_scaling, delta_mode) for i in range(n_envs)]
+
+    agent = KerasFittedQAgent(layer_sizes  = [envs[0].num_controlled_species*update_timesteps,20,20,envs[0].num_Cin_states**envs[0].num_controlled_species])
+
+    #agent.learn_heuristic()
+
+    agent.save_network(save_path + '/after_heuristic')
+    agent.saved = save_path + '/after_heuristic'
+    print(agent.saved)
+
+    train_trajectory, train_r = agent.run_episode(envs[0], 0, 100, train = False, remember = False)
+    envs[0].plot_trajectory([0,1])
+    plt.savefig(save_path + 'after_heuristic.png')
+    envs[0].reset()
+    agent.memory = []
+
+
+    overall_traj = []
+
     for i in range(n_episodes):
+
+        print()
         print('EPISODE: ', i)
         print('train: ')
         # training EPISODE
-        #explore_rate = 0
-        explore_rate = agent.get_rate(i, 0, 1, n_episodes/10)
+        #
+        #agent.memory = []
+
+        explore_rate = agent.get_rate(i, 0.05, 1., n_episodes/10)
+
         #explore_rate = 1
         print(explore_rate)
-        env.reset()
-        #env.state = (np.random.uniform(-0.5, 0.5), 0, np.random.uniform(-0.5, 0.5), 0)
-        train_trajectory, train_r = agent.run_episode(env, explore_rate, tmax)
-        train_trajectorys.append(train_trajectory)
-        train_times.append(len(train_trajectory))
+
+        for env in envs[:-1]:
+            # use policy on all envs and add to memory
+            train_trajectory, train_r = agent.run_episode(env, explore_rate, tmax, train = False, remember = True)
+            train_rewards.append(train_r)
+
+        # only train on last env
+        train_trajectory, train_r = agent.run_episode(envs[-1], explore_rate, tmax, train = True, remember = True)
         train_rewards.append(train_r)
-        train_actions = np.array(agent.actions)
+        
+        os.makedirs(save_path + '/episode' + str(i), exist_ok = True)
+        agent.save_network(save_path + '/episode' + str(i))
 
         values = np.array(agent.values)
-        env.plot_trajectory([0,1])
+
+    for i in range(5):
+        for env in envs:
+            train_trajectory, train_r = agent.run_episode(env, 0, tmax)
+            train_rewards.append(train_r)
+        os.makedirs(save_path + '/episode' + str(i+n_episodes), exist_ok = True)
+        agent.save_network(save_path + '/episode' + str(i+n_episodes))
+
+        values = np.array(agent.values)
+
+
 
 
         '''
@@ -93,21 +128,21 @@ def run_test(save_path):
         plt.show()
         '''
 
+        '''
+
         # testing EPISODE
         explore_rate = 0
         print('test: ')
         env.reset()
-        #env.state = (np.random.uniform(-1, 1), 0, np.random.uniform(-0.5, 0.5), 0)
         test_trajectory, test_r = agent.run_episode(env, explore_rate, tmax, train = False)
-        test_actions = np.array(agent.actions)
         print('Test Time: ', len(test_trajectory))
         env.plot_trajectory([0,1])
-
+        plt.show()
 
         test_times.append(len(test_trajectory))
         test_rewards.append(test_r)
         print(test_rewards)
-
+        '''
         '''
         if test_r > 10:
             env.plot_trajectory([0,1])
@@ -115,7 +150,13 @@ def run_test(save_path):
         '''
         print()
 
-    os.makedirs(save_path, exist_ok = True)
+    for env in envs:
+        env.plot_trajectory([0,1])
+        plt.hlines([20000, 30000], 0, 400, color = 'g', label = 'target')
+        env.plot_trajectory([2,3,4])
+
+        plt.show()
+
 
     # use trained policy on env with smaller smaplingn time
     #sampling_time = 0.1
@@ -129,56 +170,25 @@ def run_test(save_path):
     #env.state = (np.random.uniform(-1, 1), 0, np.random.uniform(-0.5, 0.5), 0)
     exploit_trajectory, exploit_r = agent.run_episode(exploit_env, explore_rate, tmax, train = False)
     exploit_env.plot_trajectory([0,1]) # the last test_trajectory
+    plt.hlines([20000, 30000], 0, 400, color = 'g', label = 'target')
     plt.savefig(save_path + '/exploit_populations.png')
     np.save(save_path + '/exploit_trajectory.npy', exploit_trajectory)
-    np.save(save_path + '/exploit_actions.npy', np.array(agent.actions))
 
-    np.save(save_path + '/train_trajectories.npy', np.array(train_trajectorys))
-    test_rewards = np.array(test_rewards)
     train_rewards = np.array(train_rewards)
-    test_times = np.array(test_times)
-    train_times = np.array(train_times)
 
 
-    np.save(save_path + '/test_rewards.npy', test_rewards)
     np.save(save_path + '/train_rewards.npy', train_rewards)
-    np.save(save_path + '/test_times.npy', test_times)
     np.save(save_path + '/train_times.npy', train_times)
-    np.save(save_path + '/test_actions.npy', test_actions)
-    np.save(save_path + '/train_actions.npy', train_actions)
 
     agent.save_network(save_path)
 
-    plt.figure()
-    plt.plot(train_times)
-    plt.xlabel('Timestep')
-    plt.ylabel('Timesteps until terminal state')
-    plt.savefig(save_path + '/train_times.png')
-
-    plt.figure()
-    plt.plot(test_times)
-    plt.xlabel('Timestep')
-    plt.ylabel('Timesteps until terminal state')
-    plt.savefig(save_path + '/test_times.png')
-
-    env.plot_trajectory([0,1]) # the last test_trajectory
-    plt.savefig(save_path + '/test_populations.png')
-    np.save(save_path + '/test_trajectory.npy', env.sSol)
+    for i, env in enumerate(envs):
+        env.plot_trajectory([0,1]) # the last test_trajectory
+        plt.savefig(save_path + '/test_populations_' + str(i)+ '.png')
+        np.save(save_path + '/test_trajectory_' + str(i)+ '.npy', env.sSol)
 
 
-    # plot the last train trajectory
-    plt.figure()
-    xSol = np.array(train_trajectory)
-    for i in [0,1]:
-        plt.plot(np.linspace(0, len(xSol[:,0]) ,len(xSol[:,0])), xSol[:,i], label = env.labels[i])
-    plt.legend()
-    plt.savefig(save_path + '/train_populations.png')
-    np.save(save_path + '/train_trajectory.npy', train_trajectory)
 
-
-    plt.figure()
-    plt.plot(test_rewards)
-    plt.savefig(save_path + '/test_rewards.png')
     plt.figure()
     plt.plot(train_rewards)
     plt.savefig(save_path + '/train_rewards.png')
@@ -191,7 +201,7 @@ def run_test(save_path):
 
     plt.savefig(save_path + '/values.png')
 
-    print(env.sSol)
+
     print()
     values = np.array(agent.values)
 

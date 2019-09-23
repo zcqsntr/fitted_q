@@ -84,14 +84,10 @@ def run_test(save_path):
         agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species])
         train_trajectory, train_r = agent.run_episode(env, explore_rate, tmax)
         train_actions = agent.actions
-        n_iters = 50
+        n_iters = 10
         agent.reset_weights()
 
         value_SSEs = []
-
-
-
-
 
         true_values = [agent.single_ep_reward[-1]]
 
@@ -136,7 +132,7 @@ def run_test(save_path):
         plt.plot(value_SSEs)
         plt.title('SSEs')
             #plt.savefig(save_path + '/' + str(n_iters))
-
+        plt.show()
 
 
         all_value_SSEs.append(value_SSEs)

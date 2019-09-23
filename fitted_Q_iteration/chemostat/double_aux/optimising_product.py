@@ -36,23 +36,23 @@ def entry():
     run_test(save_path)
 
 def run_test(save_path):
-    param_path = os.path.join(C_DIR, 'parameter_files/smaller_target_good_ICs_no_LV.yaml')
+    param_path = os.path.join(C_DIR, 'parameter_files/product.yaml')
     update_timesteps = 1
     one_min = 0.016666666667
-    n_mins = 5
+    n_mins = 10
 
     sampling_time = n_mins*one_min
     delta_mode = False
     tmax = int((24*60)/n_mins) # set this to 24 hours
     #tmax = 10
     print('tmax: ', tmax)
-    n_episodes = 1
+    n_episodes = 30
     train_times = []
     train_rewards = []
     test_times = []
     test_rewards = []
     pop_scaling = 100000
-    env = ChemostatEnv(param_path, no_LV_reward_function_new_target, sampling_time, update_timesteps, pop_scaling, delta_mode)
+    env = ProductEnv(param_path, no_LV_reward_function_new_target, sampling_time, update_timesteps, pop_scaling, delta_mode)
 
     agent = KerasFittedQAgent(layer_sizes  = [env.num_controlled_species*update_timesteps,20,20,env.num_Cin_states**env.num_controlled_species])
     #agent.load_network('/Users/ntreloar/Desktop/Projects/summer/fitted_Q_iteration/chemostat/double_aux/new_target/repeat9/saved_network.h5')
@@ -120,7 +120,7 @@ def run_test(save_path):
     # use trained policy on env with smaller smaplingn time
     #sampling_time = 0.1
 
-    exploit_env = ChemostatEnv(param_path, no_LV_reward_function_new_target, sampling_time, update_timesteps, pop_scaling, delta_mode)
+    exploit_env = ProductEnv(param_path, no_LV_reward_function_new_target, sampling_time, update_timesteps, pop_scaling, delta_mode)
     # testing EPISODE
     explore_rate = 0
     print('test: ')
