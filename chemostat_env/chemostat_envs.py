@@ -251,9 +251,9 @@ class ChemostatEnv():
         #print(self.Cins)
         return np.clip(Cin, 0, 0.1)
 
-    def reset(self,initial_S = False): #No
+    def reset(self,initial_S = None): #No
 
-        if not initial_S:
+        if initial_S is None:
             self.S = np.array(self.initial_S)
         else:
             self.S = np.array(initial_S)
@@ -543,9 +543,9 @@ class ProductEnv():
         #print(self.Cins)
         return np.clip(Cin, 0, 0.1)
 
-    def reset(self,initial_S = False): #No
+    def reset(self,initial_S = None): #No
 
-        if not initial_S:
+        if initial_S is None:
             self.S = np.array(self.initial_S)
         else:
             self.S = np.array(initial_S)
@@ -751,6 +751,7 @@ class SimpleChemostatEnv(ChemostatEnv):
         self.q, self.y0, self.umax, self.Km0 = param_dict['ode_params']
         self.num_species, self.num_Cin_states, self.Cin_bounds, self.initial_N, self.initial_C0 = param_dict['env_params']
         self.num_controlled_species = 1
+
     def monod(self,C0):
         '''
         Calculates the growth rate based on the monod equation

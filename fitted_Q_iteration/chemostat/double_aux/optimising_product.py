@@ -39,7 +39,7 @@ def run_test(save_path):
     param_path = os.path.join(C_DIR, 'parameter_files/product.yaml')
     update_timesteps = 1
     one_min = 0.016666666667
-    n_mins = 10
+    n_mins = 5
 
     sampling_time = n_mins*one_min
     delta_mode = False
@@ -66,7 +66,10 @@ def run_test(save_path):
         explore_rate = agent.get_rate(i, 0, 1, n_episodes/10)
         #explore_rate = 1
         print(explore_rate)
-        env.reset()
+
+
+        initial_S = np.append(np.append(np.append(np.random.uniform(10000, 50000, 2), env.initial_C), env.initial_C0),env.initial_chems)
+        env.reset(initial_S)
         #env.state = (np.random.uniform(-0.5, 0.5), 0, np.random.uniform(-0.5, 0.5), 0)
         train_trajectory, train_r = agent.run_episode(env, explore_rate, tmax)
         train_trajectorys.append(train_trajectory)
